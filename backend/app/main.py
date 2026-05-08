@@ -1,7 +1,9 @@
 import structlog
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.modules.auth.router import router as auth_router
@@ -10,6 +12,11 @@ from app.modules.geo.router import router as geo_router
 from app.modules.locations.router import router as locations_router
 from app.modules.tasks.router import router as tasks_router
 from app.modules.analytics.router import router as analytics_router
+from app.modules.notifications.router import router as notifications_router
+from app.modules.notifications.push_router import router as push_router
+from app.modules.notifications.telegram_router import router as telegram_router
+from app.modules.routing.router import router as routing_router
+from app.modules.district_accounts.router import router as district_accounts_router
 from app.modules.ws.router import router as ws_router
 
 structlog.configure(
@@ -43,8 +50,14 @@ app.include_router(users_router, prefix=API_PREFIX)
 app.include_router(geo_router, prefix=API_PREFIX)
 app.include_router(locations_router, prefix=API_PREFIX)
 app.include_router(tasks_router, prefix=API_PREFIX)
+app.include_router(notifications_router, prefix=API_PREFIX)
+app.include_router(push_router, prefix=API_PREFIX)
+app.include_router(telegram_router, prefix=API_PREFIX)
+app.include_router(routing_router, prefix=API_PREFIX)
 app.include_router(analytics_router, prefix=API_PREFIX)
+app.include_router(district_accounts_router, prefix=API_PREFIX)
 app.include_router(ws_router)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/health")

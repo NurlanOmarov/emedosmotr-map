@@ -3,11 +3,12 @@ import styled, { css } from 'styled-components';
 
 interface CardProps {
   children: React.ReactNode;
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<HTMLElement>;
   hover?: boolean;
   glow?: 'blue' | 'green' | 'red' | 'none';
   className?: string;
   padding?: string;
+  style?: React.CSSProperties;
 }
 
 const glowMap = {
@@ -18,23 +19,23 @@ const glowMap = {
 };
 
 const StyledCard = styled(motion.div)<{ $hover: boolean; $glow: string; $padding: string }>`
-  background: rgba(30, 41, 59, 0.7);
+  background: ${({ theme }) => theme.colors.glass};
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid ${({ theme }) => theme.colors.glassBorder};
   border-radius: 16px;
   padding: ${({ $padding }) => $padding};
   position: relative;
   overflow: hidden;
 
-  ${({ $hover }) =>
+  ${({ $hover, theme }) =>
     $hover &&
     css`
       cursor: pointer;
       transition: border-color 200ms ease, box-shadow 200ms ease;
       &:hover {
-        border-color: rgba(255,255,255,0.12);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        border-color: ${theme.colors.borderHover};
+        box-shadow: ${theme.shadows.lg};
       }
     `}
 
@@ -60,6 +61,7 @@ export function Card({
   glow = 'none',
   className,
   padding = '20px',
+  style,
 }: CardProps) {
   return (
     <StyledCard
@@ -67,6 +69,7 @@ export function Card({
       $glow={glowMap[glow]}
       $padding={padding}
       className={className}
+      style={style}
       onClick={onClick}
       whileHover={hover || onClick ? { y: -2 } : undefined}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}

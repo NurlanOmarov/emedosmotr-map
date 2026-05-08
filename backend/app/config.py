@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     YANDEX_MAPS_API_KEY: str = ""
     EMEDOSMOTR_DB_URL: str = ""
 
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_MAILTO: str = "admin@emedosmotr.kz"
+
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_BOT_USERNAME: str = ""
+
     DEBUG: bool = False
     ALLOWED_ORIGINS: list[str] = ["http://localhost:5173"]
 

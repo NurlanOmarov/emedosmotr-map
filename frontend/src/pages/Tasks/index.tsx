@@ -1,11 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { tasksApi } from '@/services/api';
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { TaskModal } from '@/components/shared/TaskModal';
 import type { Task, TaskStatus } from '@/types';
 
 const Page = styled(motion.div)`
@@ -26,7 +25,7 @@ const TopBar = styled.div`
 const PageTitle = styled.h1`
   font-size: 22px;
   font-weight: 800;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
   letter-spacing: -0.03em;
 `;
 
@@ -34,9 +33,9 @@ const FilterTabs = styled.div`
   display: flex;
   gap: 4px;
   padding: 4px;
-  background: rgba(255,255,255,0.04);
+  background: ${({ theme }) => theme.colors.bgSecondary};
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const Tab = styled(motion.button)<{ $active: boolean }>`
@@ -46,9 +45,9 @@ const Tab = styled(motion.button)<{ $active: boolean }>`
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
-  background: ${({ $active }) => $active ? 'rgba(59,130,246,0.2)' : 'transparent'};
-  color: ${({ $active }) => $active ? '#60A5FA' : '#64748B'};
-  border: ${({ $active }) => $active ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent'};
+  background: ${({ $active, theme }) => $active ? theme.colors.primary + '22' : 'transparent'};
+  color: ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.textSecondary};
+  border: ${({ $active, theme }) => $active ? `1px solid ${theme.colors.primary}44` : '1px solid transparent'};
 `;
 
 const List = styled.div`
@@ -61,9 +60,9 @@ const List = styled.div`
 `;
 
 const TaskCard = styled(motion.div)`
-  background: rgba(20, 30, 50, 0.8);
+  background: ${({ theme }) => theme.colors.bgCard};
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
   padding: 16px;
   cursor: pointer;
@@ -73,8 +72,8 @@ const TaskCard = styled(motion.div)`
   align-items: flex-start;
 
   &:hover {
-    background: rgba(30, 42, 68, 0.9);
-    border-color: rgba(255,255,255,0.1);
+    background: ${({ theme }) => theme.colors.bgHover};
+    border-color: ${({ theme }) => theme.colors.borderHover};
   }
 `;
 
@@ -98,7 +97,7 @@ const TaskInfo = styled.div`
 const TaskTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
@@ -117,8 +116,8 @@ const MetaChip = styled.span`
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #64748B;
-  background: rgba(255,255,255,0.04);
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.bgSecondary};
   border-radius: 6px;
   padding: 3px 8px;
 `;
@@ -148,6 +147,38 @@ const StatusChip = styled.span<{ $status: TaskStatus }>`
     }[$status])};
 `;
 
+const ObjectBadge = styled.span<{ $isGeneral: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: ${({ $isGeneral }) => $isGeneral ? 'rgba(148, 163, 184, 0.1)' : 'rgba(14, 165, 233, 0.1)'};
+  color: ${({ $isGeneral }) => $isGeneral ? '#94A3B8' : '#38BDF8'};
+  border: 1px solid ${({ $isGeneral }) => $isGeneral ? 'rgba(148, 163, 184, 0.2)' : 'rgba(14, 165, 233, 0.2)'};
+`;
+
+const AssigneeChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.bgSecondary};
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+
+  svg {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+  }
+`;
+
 const STATUS_LABELS: Record<TaskStatus, string> = {
   new: '🆕 Новая',
   assigned: '👤 Назначена',
@@ -175,8 +206,10 @@ const FILTER_TABS = [
 ];
 
 export function TasksPage() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   const [statusFilter, setStatusFilter] = useState('');
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const qc = useQueryClient();
 
   const queryFn = user?.role === 'engineer'
@@ -194,6 +227,14 @@ export function TasksPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   });
 
+  const updateTask = useMutation({
+    mutationFn: (data: any) => tasksApi.update(data.id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      setEditingTask(null);
+    },
+  });
+
   const tasks: Task[] = data?.items ?? [];
 
   return (
@@ -203,7 +244,7 @@ export function TasksPage() {
           <PageTitle>
             {user?.role === 'engineer' ? 'Мои задачи' : 'Задачи'}
           </PageTitle>
-          <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 4 }}>
             {tasks.length} задач{tasks.length !== 1 ? '' : 'а'}
           </div>
         </div>
@@ -224,9 +265,9 @@ export function TasksPage() {
 
       <List>
         {isLoading && (
-          <div style={{ textAlign: 'center', padding: 40, color: '#475569' }}>
+          <div style={{ textAlign: 'center', padding: 40, color: theme.colors.textSecondary }}>
             <motion.div
-              style={{ width: 32, height: 32, border: '3px solid rgba(59,130,246,0.3)', borderTopColor: '#3B82F6', borderRadius: '50%', margin: '0 auto 12px' }}
+              style={{ width: 32, height: 32, border: `3px solid ${theme.colors.primaryGlow}`, borderTopColor: theme.colors.primary, borderRadius: '50%', margin: '0 auto 12px' }}
               animate={{ rotate: 360 }}
               transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
             />
@@ -243,13 +284,26 @@ export function TasksPage() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ delay: i * 0.04, type: 'spring', stiffness: 200, damping: 20 }}
               layout
+              onClick={() => setEditingTask(task)}
             >
               <PriorityDot $priority={task.priority} />
               <TaskInfo>
                 <TaskTitle>{task.title}</TaskTitle>
                 <TaskMeta>
                   <StatusChip $status={task.status}>{STATUS_LABELS[task.status]}</StatusChip>
+                  
+                  <ObjectBadge $isGeneral={!task.location_id}>
+                    {task.location_id ? `🏢 ${task.location_name || 'Объект'}` : '🌐 Общая задача'}
+                  </ObjectBadge>
+
+                  {task.assignee_name && (
+                    <AssigneeChip>
+                      👤 {task.assignee_name}
+                    </AssigneeChip>
+                  )}
+
                   <MetaChip>{TYPE_LABELS[task.type] || task.type}</MetaChip>
+                  
                   {task.due_date && (
                     <MetaChip>
                       📅 {new Date(task.due_date).toLocaleDateString('ru-RU')}
@@ -269,9 +323,9 @@ export function TasksPage() {
                     borderRadius: 8,
                     fontSize: 12,
                     fontWeight: 600,
-                    background: 'rgba(34,197,94,0.1)',
-                    border: '1px solid rgba(34,197,94,0.3)',
-                    color: '#22C55E',
+                    background: theme.colors.readyBg,
+                    border: `1px solid ${theme.colors.ready}4d`,
+                    color: theme.colors.ready,
                     cursor: 'pointer',
                     flexShrink: 0,
                   }}
@@ -289,16 +343,24 @@ export function TasksPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            style={{ textAlign: 'center', padding: 60, color: '#475569' }}
+            style={{ textAlign: 'center', padding: 60, color: theme.colors.textSecondary }}
           >
             <div style={{ fontSize: 40, marginBottom: 16 }}>📋</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#64748B' }}>Задач не найдено</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textMuted }}>Задач не найдено</div>
             <div style={{ fontSize: 13, marginTop: 8 }}>
               {statusFilter ? 'Попробуйте другой фильтр' : 'Новые задачи появятся здесь'}
             </div>
           </motion.div>
         )}
       </List>
+
+      {editingTask && (
+        <TaskModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSave={(data) => updateTask.mutate(data)}
+        />
+      )}
     </Page>
   );
 }

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -25,6 +25,13 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     avatar_url: Mapped[str | None] = mapped_column(Text)
     phone: Mapped[str | None] = mapped_column(String(20))
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(50), unique=True)
+    telegram_username: Mapped[str | None] = mapped_column(String(100))
+    notification_settings: Mapped[dict] = mapped_column(
+        JSON, 
+        nullable=False,
+        server_default='{"new_task": ["in-app", "push", "telegram"], "task_status": ["in-app", "push", "telegram"], "deadline": ["in-app", "push", "telegram"]}'
+    )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -38,6 +45,5 @@ class User(Base):
     tasks_created: Mapped[list["Task"]] = relationship(  # noqa: F821
         "Task", back_populates="creator", foreign_keys="Task.created_by"
     )
-    notifications: Mapped[list["Notification"]] = relationship(  # noqa: F821
-        "Notification", back_populates="user"
-    )
+    notifications: Mapped[list["Notification"]] = relationship("Notification", back_populates="user", cascade="all, delete-orphan")  # noqa: F821
+    push_subscriptions: Mapped[list["PushSubscription"]] = relationship("PushSubscription", back_populates="user", cascade="all, delete-orphan")  # noqa: F821

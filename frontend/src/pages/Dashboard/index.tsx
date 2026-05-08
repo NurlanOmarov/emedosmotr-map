@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import styled from 'styled-components';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { analyticsApi } from '@/services/api';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import styled, { useTheme } from 'styled-components';
+import { analyticsApi, geoApi } from '@/services/api';
 import { Card } from '@/components/ui/Card';
 
 const Page = styled(motion.div)`
@@ -17,13 +17,13 @@ const Page = styled(motion.div)`
 const PageTitle = styled.h1`
   font-size: 24px;
   font-weight: 800;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
   letter-spacing: -0.03em;
 `;
 
 const SubTitle = styled.p`
   font-size: 13px;
-  color: #64748B;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
@@ -35,14 +35,16 @@ const KPIGrid = styled.div`
   @media (max-width: 600px) { grid-template-columns: 1fr; }
 `;
 
-const KPICard = styled(motion.div)<{ $gradient: string; $glow: string }>`
-  background: ${({ $gradient }) => $gradient};
+const KPICard = styled(motion.div)<{ $baseColor: string }>`
+  background: ${({ theme, $baseColor }) => theme.mode === 'dark' 
+    ? `linear-gradient(135deg, ${$baseColor}25, ${$baseColor}10)` 
+    : `linear-gradient(135deg, ${$baseColor}18, ${$baseColor}08)`};
   border-radius: 16px;
   padding: 20px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid ${({ theme, $baseColor }) => theme.mode === 'dark' ? 'rgba(255,255,255,0.06)' : `${$baseColor}35`};
   position: relative;
   overflow: hidden;
-  box-shadow: 0 0 40px ${({ $glow }) => $glow};
+  box-shadow: 0 4px 24px ${({ theme, $baseColor }) => theme.mode === 'dark' ? `${$baseColor}15` : 'rgba(0,0,0,0.03)'};
 
   &::before {
     content: '';
@@ -52,31 +54,35 @@ const KPICard = styled(motion.div)<{ $gradient: string; $glow: string }>`
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.04);
+    background: ${({ theme }) => theme.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'};
   }
 `;
 
 const KPILabel = styled.div`
   font-size: 12px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.5);
+  font-weight: 700;
+  color: ${({ theme }) => theme.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.colors.textSecondary};
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 const KPIValue = styled.div`
-  font-size: 36px;
+  font-size: 38px;
   font-weight: 800;
-  color: white;
-  letter-spacing: -0.03em;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  letter-spacing: -0.04em;
   line-height: 1;
 `;
 
 const KPISubtext = styled.div`
   font-size: 12px;
-  color: rgba(255,255,255,0.4);
-  margin-top: 6px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.mode === 'dark' ? 'rgba(255,255,255,0.4)' : theme.colors.textMuted};
+  margin-top: 8px;
 `;
 
 const MainGrid = styled.div`
@@ -89,25 +95,26 @@ const MainGrid = styled.div`
 const SectionTitle = styled.div`
   font-size: 14px;
   font-weight: 700;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
 `;
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, theme }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: 'rgba(10,18,40,0.95)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      background: theme.colors.bgCard,
+      border: `1px solid ${theme.colors.border}`,
       borderRadius: 10,
       padding: '10px 14px',
       fontSize: 13,
-      color: '#F1F5F9',
+      color: theme.colors.textPrimary,
+      boxShadow: theme.shadows.md,
     }}>
-      <div style={{ fontWeight: 700, marginBottom: 4, color: '#94A3B8' }}>{label}</div>
+      <div style={{ fontWeight: 700, marginBottom: 4, color: theme.colors.textSecondary }}>{label}</div>
       {payload.map((p: any) => (
         <div key={p.name} style={{ color: p.color }}>
           {p.name}: <strong>{p.value}</strong>
@@ -132,16 +139,14 @@ const KPI_CONFIGS = [
     key: 'total_locations',
     label: 'Всего объектов',
     icon: '📍',
-    gradient: 'linear-gradient(135deg, rgba(59,130,246,0.3), rgba(37,99,235,0.15))',
-    glow: 'rgba(59,130,246,0.15)',
+    baseColor: '#3B82F6',
     suffix: '',
   },
   {
     key: 'ready',
     label: 'Готовы',
     icon: '✅',
-    gradient: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(22,163,74,0.15))',
-    glow: 'rgba(34,197,94,0.15)',
+    baseColor: '#22C55E',
     suffix: '',
     fromStatus: 'ready',
   },
@@ -149,21 +154,20 @@ const KPI_CONFIGS = [
     key: 'in_progress',
     label: 'В работе',
     icon: '🟡',
-    gradient: 'linear-gradient(135deg, rgba(245,158,11,0.3), rgba(217,119,6,0.15))',
-    glow: 'rgba(245,158,11,0.15)',
+    baseColor: '#F59E0B',
     fromStatus: 'in_progress',
   },
   {
     key: 'critical',
     label: 'Критичные',
     icon: '🔴',
-    gradient: 'linear-gradient(135deg, rgba(239,68,68,0.3), rgba(220,38,38,0.15))',
-    glow: 'rgba(239,68,68,0.15)',
+    baseColor: '#EF4444',
     fromStatus: 'critical',
   },
 ];
 
 export function DashboardPage() {
+  const theme = useTheme() as any;
   const { data: dash } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => analyticsApi.dashboard().then((r) => r.data),
@@ -176,7 +180,7 @@ export function DashboardPage() {
 
   const { data: regions } = useQuery({
     queryKey: ['regions'],
-    queryFn: () => geoApi.getRegions().then(res => res.data),
+    queryFn: () => geoApi.getRegions().then((res) => res.data as any[]),
   });
 
   const getRegionName = (id: number) => {
@@ -211,7 +215,7 @@ export function DashboardPage() {
       <KPIGrid>
         {KPI_CONFIGS.map((cfg) => (
           <motion.div key={cfg.key} variants={item}>
-            <KPICard $gradient={cfg.gradient} $glow={cfg.glow} whileHover={{ scale: 1.02 }}>
+            <KPICard $baseColor={cfg.baseColor} whileHover={{ scale: 1.02 }}>
               <KPILabel>{cfg.icon} {cfg.label}</KPILabel>
               <KPIValue>{kpiValues[cfg.key] ?? 0}</KPIValue>
               {cfg.key === 'ready' && dash?.total_locations > 0 && (
@@ -232,18 +236,18 @@ export function DashboardPage() {
             </SectionTitle>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                <XAxis dataKey="name" tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="Готово" fill="#22C55E" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                <Bar dataKey="Критично" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                <XAxis dataKey="name" tick={{ fill: theme.colors.textSecondary, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: theme.colors.textSecondary, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip theme={theme} />} />
+                <Bar dataKey="Готово" fill={theme.colors.ready} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="Критично" fill={theme.colors.critical} radius={[4, 4, 0, 0]} maxBarSize={32} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
         </motion.div>
 
         <motion.div variants={item}>
-          <Card padding="20px" style={{ height: '100%' }}>
+          <Card padding="20px">
             <SectionTitle>
               <span>🎯</span> Доля готовых объектов
             </SectionTitle>
@@ -253,11 +257,11 @@ export function DashboardPage() {
                 const color = pct >= 70 ? '#22C55E' : pct >= 40 ? '#F59E0B' : '#EF4444';
                 return (
                   <div key={r.region_id}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12, color: '#94A3B8' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12, color: theme.colors.textSecondary }}>
                       <span>{getRegionName(r.region_id)}</span>
                       <span style={{ fontWeight: 700, color }}>{pct}%</span>
                     </div>
-                    <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: 6, background: theme.colors.bgSecondary, borderRadius: 3, overflow: 'hidden' }}>
                       <motion.div
                         style={{ height: '100%', background: color, borderRadius: 3 }}
                         initial={{ width: 0 }}
@@ -269,7 +273,7 @@ export function DashboardPage() {
                 );
               })}
               {(!regionStats || regionStats.length === 0) && (
-                <div style={{ textAlign: 'center', color: '#475569', fontSize: 13, padding: '20px 0' }}>
+                <div style={{ textAlign: 'center', color: theme.colors.textSecondary, fontSize: 13, padding: '20px 0' }}>
                   Нет данных
                 </div>
               )}

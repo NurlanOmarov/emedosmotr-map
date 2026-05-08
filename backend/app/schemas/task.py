@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class TaskCreate(BaseModel):
     location_id: uuid.UUID | None = None
     region_id: int | None = None
+    settlement_id: int | None = None
     title: str = Field(max_length=500)
     description: str | None = None
     type: Literal[
@@ -57,13 +58,16 @@ class TaskCommentResponse(BaseModel):
 class TaskResponse(BaseModel):
     id: uuid.UUID
     location_id: uuid.UUID | None
+    location_name: str | None = None
     region_id: int | None
+    settlement_id: int | None = None
     title: str
     description: str | None
     type: str
     status: str
     priority: str
     assigned_to: uuid.UUID | None
+    assignee_name: str | None = None
     created_by: uuid.UUID
     due_date: date | None
     completed_at: datetime | None

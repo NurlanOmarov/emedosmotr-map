@@ -58,8 +58,12 @@ class Commission(Base):
     address: Mapped[str | None] = mapped_column(Text)
     computers_available: Mapped[int] = mapped_column(Integer, default=0)
     computers_required: Mapped[int] = mapped_column(Integer, default=0)
+    doctors_count: Mapped[int] = mapped_column(Integer, default=0)
+    connected_computers_count: Mapped[int] = mapped_column(Integer, default=0)
     internet_status: Mapped[bool] = mapped_column(Boolean, default=False)
+    internet_type: Mapped[str | None] = mapped_column(String(50))  # wired, wi-fi, fiber, adsl
     internet_speed_mbps: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    has_local_network: Mapped[bool] = mapped_column(Boolean, default=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="critical")
     comment: Mapped[str | None] = mapped_column(Text)
     last_updated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
@@ -92,4 +96,7 @@ class MedicalOrganization(Base):
     location: Mapped["Location"] = relationship("Location", back_populates="medical_orgs")
     equipment: Mapped[list["MedicalEquipment"]] = relationship(  # noqa: F821
         "MedicalEquipment", back_populates="organization"
+    )
+    researches: Mapped[list["MedicalResearch"]] = relationship(  # noqa: F821
+        "MedicalResearch", back_populates="organization"
     )

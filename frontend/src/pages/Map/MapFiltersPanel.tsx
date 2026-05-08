@@ -20,17 +20,40 @@ const Panel = styled(motion.div)`
   top: 60px;
   width: 280px;
   z-index: 30;
-  background: rgba(10, 18, 40, 0.97);
+  background: ${({ theme }) => theme.colors.glass};
   backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+
+  @media (max-width: 640px) {
+    width: 100%;
+    left: 0;
+    top: auto;
+    bottom: 0;
+    border-radius: 20px 20px 0 0;
+    border-left: none;
+    border-right: none;
+  }
+`;
+
+const DragHandle = styled.div`
+  display: none;
+  @media (max-width: 640px) {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 2px;
+    margin: 8px auto 0;
+    flex-shrink: 0;
+  }
 `;
 
 const PanelHead = styled.div`
   padding: 16px 16px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -39,7 +62,7 @@ const PanelHead = styled.div`
 const PanelTitle = styled.h3`
   font-size: 14px;
   font-weight: 600;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Body = styled.div`
@@ -56,7 +79,7 @@ const Section = styled.div``;
 const SectionLabel = styled.div`
   font-size: 11px;
   font-weight: 700;
-  color: #475569;
+  color: ${({ theme }) => theme.colors.textMuted};
   text-transform: uppercase;
   letter-spacing: 0.07em;
   margin-bottom: 8px;
@@ -75,17 +98,17 @@ const Chip = styled(motion.button)<{ $active: boolean; $color?: string }>`
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
-  background: ${({ $active, $color }) =>
-    $active ? ($color ? `${$color}20` : 'rgba(59,130,246,0.15)') : 'rgba(255,255,255,0.04)'};
-  color: ${({ $active, $color }) => ($active ? ($color || '#60A5FA') : '#64748B')};
-  border: 1px solid ${({ $active, $color }) =>
-    $active ? ($color ? `${$color}40` : 'rgba(59,130,246,0.3)') : 'rgba(255,255,255,0.07)'};
-  &:hover { background: rgba(255,255,255,0.08); }
+  background: ${({ $active, $color, theme }) =>
+    $active ? ($color ? `${$color}20` : theme.colors.primaryGlow) : theme.colors.bgSecondary};
+  color: ${({ $active, $color, theme }) => ($active ? ($color || theme.colors.primary) : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, $color, theme }) =>
+    $active ? ($color ? `${$color}40` : `${theme.colors.primary}40`) : theme.colors.border};
+  &:hover { background: ${({ theme }) => theme.colors.bgHover}; }
 `;
 
 const Footer = styled.div`
   padding: 12px 16px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   gap: 8px;
 `;
@@ -96,11 +119,29 @@ const STATUS_OPTIONS: { value: StatusType; label: string; color: string }[] = [
   { value: 'critical', label: '🔴 Критично', color: '#EF4444' },
 ];
 
+const TypeIcon = styled.span`
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin-right: 6px;
+  
+  img {
+    width: 160%;
+    height: 160%;
+    object-fit: contain;
+    mask-image: radial-gradient(circle, black 50%, transparent 90%);
+    -webkit-mask-image: radial-gradient(circle, black 50%, transparent 90%);
+  }
+`;
+
 const TYPE_OPTIONS: { value: LocationType; label: string }[] = [
-  { value: 'military_office', label: '🏛️ Военкомат' },
-  { value: 'district_hospital', label: '🏥 ЦРБ' },
-  { value: 'private_clinic', label: '💊 Частная клиника' },
-  { value: 'medical_center', label: '⚕️ Медцентр' },
+  { value: 'military_office', label: 'Военкомат' },
+  { value: 'district_hospital', label: 'ЦРБ' },
+  { value: 'private_clinic', label: 'Частная клиника' },
+  { value: 'medical_center', label: 'Медцентр' },
 ];
 
 interface Props {
@@ -146,6 +187,7 @@ export function MapFiltersPanel({ onClose }: Props) {
         exit={{ opacity: 0, scale: 0.95, y: -10 }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
+        <DragHandle />
         <PanelHead>
           <PanelTitle>Фильтры</PanelTitle>
           <button onClick={onClose} style={{ color: '#64748B', fontSize: 18, cursor: 'pointer', background: 'none', border: 'none' }}>×</button>
@@ -179,6 +221,9 @@ export function MapFiltersPanel({ onClose }: Props) {
                   onClick={() => toggleType(opt.value)}
                   whileTap={{ scale: 0.95 }}
                 >
+                  <TypeIcon>
+                    <img src="/icons/hospital.png" alt="" />
+                  </TypeIcon>
                   {opt.label}
                 </Chip>
               ))}

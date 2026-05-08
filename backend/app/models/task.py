@@ -16,6 +16,7 @@ class Task(Base):
         UUID(as_uuid=True), ForeignKey("locations.id", ondelete="SET NULL"), nullable=True
     )
     region_id: Mapped[int | None] = mapped_column(Integer)
+    settlement_id: Mapped[int | None] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     type: Mapped[str] = mapped_column(String(50), nullable=False)

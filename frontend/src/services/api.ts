@@ -46,13 +46,25 @@ export const authApi = {
   me: () => api.get('/auth/me'),
 };
 
+export const telegramApi = {
+  getBindCode: () => api.post<{ code: string }>('/telegram/generate-bind-code'),
+};
+
 // Geo
 export const geoApi = {
-  getRegions: (includeGeometry = false) =>
-    api.get('/geo/regions', { params: { include_geometry: includeGeometry } }),
+  getOblasts: () => api.get('/geo/oblasts'),
+  createOblast: (data: { name: string; code?: string }) => api.post('/geo/oblasts', data),
+  deleteOblast: (id: number) => api.delete(`/geo/oblasts/${id}`),
+  getRegions: (oblastId?: number, includeGeometry = false) =>
+    api.get('/geo/regions', { params: { include_geometry: includeGeometry, ...(oblastId ? { oblast_id: oblastId } : {}) } }),
   getRegion: (id: number) => api.get(`/geo/regions/${id}`),
+  updateRegion: (id: number, data: any) => api.put(`/geo/regions/${id}`, data),
+  getSettlement: (id: number) => api.get(`/geo/settlements/${id}`),
   getSettlements: (regionId?: number) =>
     api.get('/geo/settlements', { params: regionId ? { region_id: regionId } : {} }),
+  createSettlement: (data: any) => api.post('/geo/settlements', data),
+  updateSettlement: (id: number, data: any) => api.put(`/geo/settlements/${id}`, data),
+  deleteSettlement: (id: number) => api.delete(`/geo/settlements/${id}`),
 };
 
 // Locations
@@ -69,9 +81,21 @@ export const locationsApi = {
   getCommission: (id: string) => api.get(`/locations/${id}/commission`),
   createCommission: (id: string, data: unknown) =>
     api.post(`/locations/${id}/commission`, data),
+  updateCommission: (id: string, data: unknown) =>
+    api.put(`/locations/${id}/commission`, data),
   getMedicalOrgs: (id: string) => api.get(`/locations/${id}/medical-orgs`),
   createMedicalOrg: (id: string, data: unknown) =>
     api.post(`/locations/${id}/medical-orgs`, data),
+  getRelayDetail: (id: string) => api.get(`/locations/${id}/relay-detail`),
+  updateRelayDetail: (id: string, data: unknown) => api.put(`/locations/${id}/relay-detail`, data),
+  uploadImage: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/locations/${id}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  deleteImage: (id: string, url: string) => api.delete(`/locations/${id}/images`, { params: { url } }),
 };
 
 // Tasks
@@ -85,6 +109,17 @@ export const tasksApi = {
     api.patch(`/tasks/${id}/status`, { status }),
   addComment: (id: string, content: string) =>
     api.post(`/tasks/${id}/comments`, { content }),
+  delete: (id: string) => api.delete(`/tasks/${id}`),
+};
+
+// Search
+export const searchApi = {
+  locations: (q: string) =>
+    api.get('/locations', { params: { q, per_page: 10 } }),
+  settlements: (q: string) =>
+    api.get('/geo/settlements', { params: { q, limit: 10 } }),
+  tasks: (q: string) =>
+    api.get('/tasks', { params: { q, per_page: 10 } }),
 };
 
 // Analytics
@@ -95,9 +130,41 @@ export const analyticsApi = {
 
 // Users
 export const usersApi = {
+  listEngineers: (params?: Record<string, unknown>) => api.get('/users/engineers', { params }),
   list: (params?: Record<string, unknown>) => api.get('/users', { params }),
   get: (id: string) => api.get(`/users/${id}`),
   create: (data: unknown) => api.post('/users', data),
   update: (id: string, data: unknown) => api.put(`/users/${id}`, data),
   delete: (id: string) => api.delete(`/users/${id}`),
+};
+
+// Researches
+export const researchesApi = {
+  list: (orgId: string) => api.get(`/locations/medical-orgs/${orgId}/researches`),
+  create: (orgId: string, data: unknown) => api.post(`/locations/medical-orgs/${orgId}/researches`, data),
+  update: (id: string, data: unknown) => api.patch(`/locations/researches/${id}`, data),
+  getEquipment: (orgId: string) => api.get(`/locations/medical-orgs/${orgId}/equipment`),
+  createEquipment: (orgId: string, data: unknown) => api.post(`/locations/medical-orgs/${orgId}/equipment`, data),
+  deleteEquipment: (id: string) => api.delete(`/locations/equipment/${id}`),
+};
+
+// District Accounts
+export const districtAccountsApi = {
+  list: (settlementId?: number) =>
+    api.get('/district-accounts', { params: settlementId ? { settlement_id: settlementId } : {} }),
+  create: (data: any) => api.post('/district-accounts', data),
+  upload: (settlementId: number, file: File, replace = false, category?: string) => {
+    const formData = new FormData();
+    formData.append('settlement_id', settlementId.toString());
+    formData.append('file', file);
+    formData.append('replace', String(replace));
+    if (category) formData.append('category', category);
+    return api.post('/district-accounts/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  update: (id: number, data: any) => api.patch(`/district-accounts/${id}`, data),
+  delete: (id: number) => api.delete(`/district-accounts/${id}`),
+  bulkDelete: (ids: number[]) => api.post('/district-accounts/bulk-delete', ids),
+  clear: (settlementId: number) => api.delete(`/district-accounts/settlement/${settlementId}`),
 };

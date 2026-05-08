@@ -1,20 +1,35 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { locationsApi, geoApi } from '@/services/api';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useMapWebSocket } from '@/hooks/useMapWebSocket';
+import { useThemeStore } from '@/styles/useThemeStore';
 import { LocationDetail } from './LocationDetail';
+import { RegionDetail } from './RegionDetail';
+import { SettlementDetail } from './SettlementDetail';
 import { MapFiltersPanel } from './MapFiltersPanel';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import type { StatusType } from '@/types';
+import { AddLocationModal } from './AddLocationModal';
+import { MapToolsPanel, ActiveTool, RoutePoint } from './MapToolsPanel';
+import { TaskModal } from '@/components/shared/TaskModal';
+import { tasksApi } from '@/services/api';
+import { LOCATION_TYPE_CONFIG, STATUS_COLORS, StatusType } from '@/types';
+
+const STATUS_LABELS: Record<StatusType, string> = {
+  ready: 'Готов',
+  in_progress: 'В работе',
+  critical: 'Критично',
+};
 
 declare global {
   interface Window {
     ymaps: any;
   }
 }
+
+// ─── Styled Components ────────────────────────────────────────────────────────
 
 const Container = styled.div`
   position: relative;
@@ -28,9 +43,48 @@ const MapContainer = styled.div`
   position: relative;
 `;
 
-const YMapEl = styled.div`
+const YMapEl = styled.div<{ $whiteBg: boolean }>`
   width: 100%;
   height: 100%;
+  background: ${({ $whiteBg, theme }) =>
+    $whiteBg ? (theme.mode === 'dark' ? '#04080F' : '#ffffff') : theme.colors.bgSecondary};
+  transition: background 0.4s ease;
+
+  ${({ $whiteBg, theme }) => $whiteBg && theme.mode === 'dark' && `
+    [class*="ymaps-"][class*="-pane"],
+    [class*="ymaps-"][class*="-tiles"],
+    [class*="ymaps-"][class*="-map-bg"],
+    canvas {
+      background: #04080F !important;
+    }
+  `}
+  
+  /* Apply dark filter to map if in dark mode */
+  ${({ theme }) => theme.mode === 'dark' && `
+    /* Target Yandex Map container with a more general selector to handle version changes */
+    div[class*="ymaps-"][class*="-map"] {
+      filter: invert(1) hue-rotate(180deg) brightness(0.3) contrast(1.3) !important;
+      background: transparent !important;
+    }
+    
+    /* Force transparency on all internal panes */
+    [class*="ymaps-"][class*="-pane"] {
+      background: transparent !important;
+    }
+
+    /* Re-invert markers, balloons and other UI elements to keep original colors */
+    [class*="ymaps-"][class*="-placemark"], 
+    [class*="ymaps-"][class*="-balloon"],
+    [class*="ymaps-"][class*="-route-panel"],
+    [class*="ymaps-"][class*="-copyright"],
+    [class*="ymaps-"][class*="-controls__control"] {
+      filter: invert(1) hue-rotate(180deg) brightness(2.5) contrast(0.8) !important;
+    }
+  `}
+
+  canvas {
+    transition: opacity 0.4s ease;
+  }
 `;
 
 const FiltersBtn = styled(motion.button)`
@@ -42,16 +96,37 @@ const FiltersBtn = styled(motion.button)`
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: rgba(15, 23, 42, 0.9);
+  background: ${({ theme }) => theme.colors.glass};
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid ${({ theme }) => theme.colors.glassBorder};
   border-radius: 12px;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  &:hover { background: rgba(30,41,59,0.95); border-color: rgba(255,255,255,0.14); }
+  box-shadow: ${({ theme }) => theme.shadows.md};
+  &:hover { background: ${({ theme }) => theme.colors.bgHover}; border-color: ${({ theme }) => theme.colors.borderHover}; }
+`;
+
+const AddBtn = styled(motion.button)`
+  position: absolute;
+  bottom: 24px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  background: rgba(37, 99, 235, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(59,130,246,0.4);
+  border-radius: 12px;
+  color: #F1F5F9;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(37,99,235,0.4);
+  &:hover { background: rgba(37, 99, 235, 0.95); }
 `;
 
 const StatsBar = styled(motion.div)`
@@ -64,11 +139,18 @@ const StatsBar = styled(motion.div)`
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(10, 18, 40, 0.9);
+  background: ${({ theme }) => theme.colors.glass};
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid ${({ theme }) => theme.colors.glassBorder};
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: ${({ theme }) => theme.shadows.md};
+
+  @media (max-width: 640px) {
+    top: auto;
+    bottom: 80px;
+    padding: 6px 12px;
+    gap: 12px;
+  }
 `;
 
 const StatItem = styled.div`
@@ -87,7 +169,7 @@ const StatItem = styled.div`
 const StatNum = styled.span<{ $color?: string }>`
   font-weight: 700;
   font-size: 14px;
-  color: ${({ $color }) => $color || '#F1F5F9'};
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
 const LayerPanel = styled(motion.div)`
@@ -99,12 +181,16 @@ const LayerPanel = styled(motion.div)`
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  background: rgba(10, 18, 40, 0.9);
+  background: ${({ theme }) => theme.colors.glass};
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid ${({ theme }) => theme.colors.glassBorder};
   border-radius: 14px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   min-width: 160px;
+
+  @media (max-width: 768px) {
+    display: none; // Hide on mobile, can be accessed via menu if needed or just keep map clean
+  }
 `;
 
 const LayerTitle = styled.div`
@@ -126,10 +212,10 @@ const LayerToggle = styled(motion.button)<{ $active: boolean }>`
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
-  background: ${({ $active }) => $active ? 'rgba(59,130,246,0.12)' : 'transparent'};
-  color: ${({ $active }) => $active ? '#60A5FA' : '#64748B'};
-  border: 1px solid ${({ $active }) => $active ? 'rgba(59,130,246,0.2)' : 'transparent'};
-  &:hover { background: rgba(255,255,255,0.06); color: #F1F5F9; }
+  background: ${({ $active, theme }) => $active ? theme.colors.primaryGlow : 'transparent'};
+  color: ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.textMuted};
+  border: 1px solid ${({ $active, theme }) => $active ? `${theme.colors.primary}33` : 'transparent'};
+  &:hover { background: ${({ theme }) => theme.colors.bgHover}; color: ${({ theme }) => theme.colors.textPrimary}; }
 `;
 
 const Dot = styled.span<{ $color: string }>`
@@ -140,37 +226,560 @@ const Dot = styled.span<{ $color: string }>`
   flex-shrink: 0;
 `;
 
-const LAYERS = [
-  { id: 'statuses', label: 'Статусы', icon: '🔴' },
-  { id: 'tasks', label: 'Задачи', icon: '✅' },
-  { id: 'regions', label: 'Регионы', icon: '🗺️' },
-  { id: 'equipment', label: 'Оборудование', icon: '🏥' },
-];
+const BreadcrumbBar = styled(motion.div)`
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: ${({ theme }) => theme.colors.glass};
+  backdrop-filter: blur(16px);
+  border: 1px solid ${({ theme }) => theme.colors.glassBorder};
+  border-radius: 10px;
+  box-shadow: ${({ theme }) => theme.shadows.md};
+  font-size: 12px;
+  white-space: nowrap;
 
-const STATUS_COLORS: Record<string, string> = {
-  ready: '#22C55E',
-  in_progress: '#F59E0B',
-  critical: '#EF4444',
-};
+  @media (max-width: 640px) {
+    top: 16px;
+    width: auto;
+    max-width: 90vw;
+    overflow-x: auto;
+    padding: 8px 16px;
+  }
+`;
 
-function getMarkerColor(status: string): string {
-  return STATUS_COLORS[status] || '#6B7280';
+const BreadLink = styled.button`
+  background: none;
+  border: none;
+  color: #60A5FA;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  &:hover { color: #93C5FD; text-decoration: underline; }
+`;
+
+const BreadCurrent = styled.span`
+  color: #94A3B8;
+`;
+
+const BreadSep = styled.span`
+  color: #334155;
+  margin: 0 2px;
+`;
+
+const LevelIndicator = styled(motion.div)<{ $level: string }>`
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 5px 12px;
+  background: ${({ theme }) => theme.colors.glass};
+  backdrop-filter: blur(12px);
+  border: 1px solid ${({ theme }) => theme.colors.glassBorder};
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${({ $level }) =>
+    $level === 'settlement' ? '#22C55E' :
+    $level === 'region' ? '#60A5FA' :
+    '#94A3B8'};
+  letter-spacing: 0.04em;
+`;
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const STATUS_PRIORITY: Record<string, number> = { critical: 0, in_progress: 1, ready: 2 };
+
+function worstStatus(statuses: string[]): string {
+  return statuses.reduce(
+    (worst, s) => (STATUS_PRIORITY[s] ?? 3) < (STATUS_PRIORITY[worst] ?? 3) ? s : worst,
+    'ready'
+  );
 }
 
+const LAYERS = [
+  { id: 'statuses', label: 'Статусы', icon: '📍' },
+  { id: 'tasks', label: 'Задачи', icon: '/icons/tasks.png' },
+  { id: 'regions', label: 'Регионы', icon: '/icons/map.png' },
+  { id: 'equipment', label: 'Оборудование', icon: '/icons/equipment.png' },
+  { id: 'distance', label: 'Дальность', icon: '📏' },
+];
+
+const LayerIcon = styled.span`
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  
+  img {
+    width: 130%;
+    height: 130%;
+    object-fit: contain;
+    mask-image: radial-gradient(circle, black 50%, transparent 90%);
+    -webkit-mask-image: radial-gradient(circle, black 50%, transparent 90%);
+  }
+`;
+
+
+const LEVEL_LABELS: Record<string, string> = {
+  country: 'Казахстан',
+  region: 'Область',
+  settlement: 'Нас. пункт',
+};
+
+const WRITER_ROLES = ['superadmin', 'regional_manager', 'engineer'];
+
+const KZ_CENTER: [number, number] = [48.0196, 66.9237];
+const KZ_ZOOM = 5;
+
+function getBoundsFromGeomJson(geomJson: any): [[number, number], [number, number]] | null {
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+
+  const processRing = (ring: number[][]) => {
+    ring.forEach(([lon, lat]) => {
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+    });
+  };
+
+  try {
+    const geom = typeof geomJson === 'string' ? JSON.parse(geomJson) : geomJson;
+    if (geom.type === 'Polygon') {
+      geom.coordinates.forEach(processRing);
+    } else if (geom.type === 'MultiPolygon') {
+      geom.coordinates.forEach((poly: number[][][]) => poly.forEach(processRing));
+    }
+  } catch {
+    return null;
+  }
+
+  if (!isFinite(minLat)) return null;
+  return [[minLat, minLon], [maxLat, maxLon]];
+}
+
+const MEDICAL_TYPES = new Set([
+  'district_hospital', 'state_medical', 'private_medical', 'private_clinic', 'medical_center',
+]);
+
+function makeSvgUri(svg: string): string {
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function makeMilitarySvg(color: string): string {
+  return makeSvgUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="16" fill="${color}" opacity="0.15"/>
+      <polygon points="18,4 21.5,13.5 32,13.5 23.5,19.5 26.5,29 18,23.5 9.5,29 12.5,19.5 4,13.5 14.5,13.5"
+        fill="${color}" stroke="white" stroke-width="1.2" stroke-linejoin="round"/>
+    </svg>`
+  );
+}
+
+function makeMedicalSvg(color: string): string {
+  return makeSvgUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="16" fill="${color}" opacity="0.15"/>
+      <circle cx="18" cy="18" r="14" fill="${color}" opacity="0.9"/>
+      <rect x="15" y="9" width="6" height="18" rx="2" fill="white"/>
+      <rect x="9" y="15" width="18" height="6" rx="2" fill="white"/>
+    </svg>`
+  );
+}
+
+function makeServerSvg(color: string): string {
+  return makeSvgUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="16" fill="${color}" opacity="0.15"/>
+      <rect x="10" y="10" width="16" height="5" rx="1.5" fill="${color}" stroke="white" stroke-width="0.8"/>
+      <circle cx="22" cy="12.5" r="1.2" fill="white"/>
+      <rect x="10" y="17" width="16" height="5" rx="1.5" fill="${color}" stroke="white" stroke-width="0.8"/>
+      <circle cx="22" cy="19.5" r="1.2" fill="white"/>
+      <line x1="14" y1="22" x2="14" y2="27" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="22" y1="22" x2="22" y2="27" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="11" y1="27" x2="25" y2="27" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+    </svg>`
+  );
+}
+
+// ─── Geo helpers ──────────────────────────────────────────────────────────────
+
+function haversineKm(a: [number, number], b: [number, number]): number {
+  const R = 6371;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dLat = toRad(b[0] - a[0]);
+  const dLon = toRad(b[1] - a[1]);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const x = sinDLat * sinDLat + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * sinDLon * sinDLon;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function nearestNeighborOrder(points: RoutePoint[]): RoutePoint[] {
+  if (points.length <= 2) return points;
+  const remaining = [...points.slice(1)];
+  const result = [points[0]];
+  while (remaining.length > 0) {
+    const last = result[result.length - 1];
+    let nearestIdx = 0;
+    let nearestDist = Infinity;
+    remaining.forEach((p, i) => {
+      const d = haversineKm(last.coords, p.coords);
+      if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
+    });
+    result.push(remaining[nearestIdx]);
+    remaining.splice(nearestIdx, 1);
+  }
+  return result;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export function MapPage() {
-  const { mode, selectedLocationId, activeLayers, toggleLayer, selectLocation, filters } = useMapViewStore();
+  const {
+    mode,
+    selectedLocationId,
+    activeLayers,
+    toggleLayer,
+    selectLocation,
+    filters,
+    mapLevel,
+    selectedRegionId,
+    selectedRegionName,
+    selectedSettlementId,
+    selectedSettlementName,
+    selectRegionLevel,
+    selectSettlementLevel,
+    backToCountry,
+    backToRegion,
+    showAddModal,
+    openAddModal,
+    closeAddModal,
+    mapBackground,
+    setMapBackground,
+    distanceCenter,
+    setDistanceCenter,
+  } = useMapViewStore();
   const { user } = useAuthStore();
+  const { themeMode } = useThemeStore();
+  useMapWebSocket();
   const mapRef = useRef<any>(null);
+
+  const handleBackToCountry = () => {
+    backToCountry();
+    if (mapRef.current) {
+      mapRef.current.setCenter(KZ_CENTER, KZ_ZOOM, { duration: 500 });
+    }
+  };
+
+  const handleBackToRegion = () => {
+    backToRegion();
+    if (!mapRef.current || !regionsData || selectedRegionId == null) return;
+    const region = Array.isArray(regionsData)
+      ? regionsData.find((r: any) => r.region_id === selectedRegionId)
+      : null;
+    if (!region) return;
+    const bounds = getBoundsFromGeomJson(region.geometry_json);
+    if (bounds) {
+      mapRef.current.setBounds(bounds, { checkZoomRange: true, duration: 500, zoomMargin: 40 });
+    } else if (region.center_lat && region.center_lon) {
+      mapRef.current.setCenter([region.center_lat, region.center_lon], 8, { duration: 500 });
+    }
+  };
+
   const mapElRef = useRef<HTMLDivElement>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+
+  // Task Modal for "Send to Engineer"
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [prefilledTask, setPrefilledTask] = useState<any>(null);
+
+  // Collections refs
   const featuresCollectionRef = useRef<any>(null);
+  const settlementCollectionRef = useRef<any>(null);
   const regionsCollectionRef = useRef<any>(null);
+  const labelsCollectionRef = useRef<any>(null);
+
   const regionsLayerActive = activeLayers.includes('regions');
+  const canAdd = user?.role && WRITER_ROLES.includes(user.role);
+
+  // ── Tool state ────────────────────────────────────────────────────────────
+
+  const [activeTool, setActiveTool] = useState<ActiveTool>('none');
+  const activeToolRef = useRef<ActiveTool>('none');
+  useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
+
+  const getPlacemarkOptions = useCallback((type: string, color: string) => {
+    const customIcon = (href: string) => ({
+      iconLayout: 'default#image',
+      iconImageHref: href,
+      iconImageSize: [36, 36],
+      iconImageOffset: [-18, -18],
+    });
+
+    const isTool = activeToolRef.current !== 'none';
+    const options: any = {
+      iconColor: color,
+      cursor: isTool ? 'crosshair' : 'pointer'
+    };
+
+    if (type === 'military_office') Object.assign(options, customIcon(makeMilitarySvg(color)));
+    else if (MEDICAL_TYPES.has(type)) Object.assign(options, customIcon(makeMedicalSvg(color)));
+    else if (type === 'relay_server_location') Object.assign(options, customIcon(makeServerSvg(color)));
+    else options.preset = 'islands#dotIcon';
+
+    return options;
+  }, []);
+
+  // Ruler
+  const [rulerPoints, setRulerPoints] = useState<RoutePoint[]>([]);
+  const rulerPointsRef = useRef<RoutePoint[]>([]);
+  const rulerLineRef = useRef<any>(null);
+
+  // Route planner (multi-stop)
+  interface RouteResult {
+    distance: string;
+    duration: string;
+    duration_min?: number;
+  }
+  const [routeWaypoints, setRouteWaypoints] = useState<RoutePoint[]>([]);
+  const routeWaypointsRef = useRef<RoutePoint[]>([]);
+  const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
+  const [isBuilding, setIsBuilding] = useState(false);
+  const routeObjRef = useRef<any>(null);
+
+  // ── Map cursor: crosshair when tool is active ─────────────────────────────
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const isTool = activeTool !== 'none';
+    const cursor = isTool ? 'crosshair' : '';
+    
+    // Update map container
+    const el = mapRef.current.container.getElement() as HTMLElement;
+    el.style.cursor = cursor;
+
+    // Set cursor on collections - objects will inherit this unless overridden
+    const collections = [regionsCollectionRef, featuresCollectionRef, settlementCollectionRef];
+    collections.forEach(ref => {
+      if (ref.current) {
+        ref.current.options.set('cursor', isTool ? 'crosshair' : 'pointer');
+        
+        // Also force update children to be sure
+        ref.current.each((obj: any) => {
+          obj.options.set('cursor', isTool ? 'crosshair' : 'pointer');
+        });
+      }
+    });
+  }, [activeTool, mapReady]);
+
+  // ── HTML decode helper (for Yandex API responses) ─────────────────────────
+
+  const decodeHtml = (html: string): string => {
+    const el = document.createElement('textarea');
+    el.innerHTML = html;
+    return el.value;
+  };
+
+  // ── Ruler: update polyline on map ─────────────────────────────────────────
+
+  const updateRulerLine = useCallback((points: RoutePoint[]) => {
+    if (!mapRef.current || !window.ymaps) return;
+    if (rulerLineRef.current) {
+      mapRef.current.geoObjects.remove(rulerLineRef.current);
+      rulerLineRef.current = null;
+    }
+    if (points.length === 2) {
+      const line = new window.ymaps.Polyline(
+        [points[0].coords, points[1].coords],
+        { hintContent: 'По прямой' },
+        { strokeColor: '#F59E0B', strokeWidth: 2, strokeStyle: 'dash', strokeOpacity: 0.85 }
+      );
+      mapRef.current.geoObjects.add(line);
+      rulerLineRef.current = line;
+    }
+  }, []);
+
+  const clearRuler = useCallback(() => {
+    rulerPointsRef.current = [];
+    setRulerPoints([]);
+    if (rulerLineRef.current && mapRef.current) {
+      mapRef.current.geoObjects.remove(rulerLineRef.current);
+      rulerLineRef.current = null;
+    }
+  }, []);
+
+  // ── Route planner ─────────────────────────────────────────────────────────
+
+  const clearRouteObj = useCallback(() => {
+    if (routeObjRef.current && mapRef.current) {
+      mapRef.current.geoObjects.remove(routeObjRef.current);
+      routeObjRef.current = null;
+    }
+  }, []);
+
+  const clearRoute = useCallback(() => {
+    routeWaypointsRef.current = [];
+    setRouteWaypoints([]);
+    setRouteResult(null);
+    clearRouteObj();
+  }, [clearRouteObj]);
+
+  const removeWaypoint = useCallback((index: number) => {
+    const newWps = routeWaypointsRef.current.filter((_, i) => i !== index);
+    routeWaypointsRef.current = newWps;
+    setRouteWaypoints([...newWps]);
+    setRouteResult(null);
+    clearRouteObj();
+  }, [clearRouteObj]);
+
+  const moveWaypoint = useCallback((from: number, to: number) => {
+    const wps = [...routeWaypointsRef.current];
+    const [item] = wps.splice(from, 1);
+    wps.splice(to, 0, item);
+    routeWaypointsRef.current = wps;
+    setRouteWaypoints([...wps]);
+    setRouteResult(null);
+    clearRouteObj();
+  }, [clearRouteObj]);
+
+  const optimizeRoute = useCallback(() => {
+    const wps = routeWaypointsRef.current;
+    if (wps.length <= 2) return;
+    const optimized = nearestNeighborOrder(wps);
+    routeWaypointsRef.current = optimized;
+    setRouteWaypoints([...optimized]);
+    setRouteResult(null);
+    clearRouteObj();
+  }, [clearRouteObj]);
+
+  const handleSendToEngineer = useCallback(() => {
+    if (!routeResult) return;
+    
+    const waypointsText = routeWaypoints.map((wp, i) => `${i + 1}. ${wp.name}`).join('\n');
+    const distText = routeResult.distance;
+    const timeText = routeResult.duration;
+    
+    const description = `Планируемый маршрут:\n${waypointsText}\n\nРасстояние: ${distText}\nПриблизительное время в пути: ${timeText}`;
+    
+    // Calculate estimated hours (drive time + 30m per stop buffer)
+    const driveHours = (routeResult.duration_min || 0) / 60;
+    const bufferHours = (routeWaypoints.length * 0.5); // 30 min per point
+    const totalHours = Math.ceil((driveHours + bufferHours) * 2) / 2; // Round to nearest 0.5
+    
+    setPrefilledTask({
+      title: `Логистика: ${routeWaypoints[0].name} — ${routeWaypoints[routeWaypoints.length - 1].name}`,
+      description,
+      type: 'maintenance',
+      priority: 'normal',
+      estimated_hours: totalHours > 0 ? totalHours : 1.0
+    });
+    setShowTaskModal(true);
+  }, [routeResult, routeWaypoints]);
+
+  const buildRoute = useCallback(() => {
+    const wps = routeWaypointsRef.current;
+    if (!window.ymaps || !mapRef.current || wps.length < 2) return;
+    setIsBuilding(true);
+    clearRouteObj();
+    setRouteResult(null);
+
+    window.ymaps.route(wps.map(w => w.coords), { routingMode: 'auto' })
+      .then((route: any) => {
+        routeObjRef.current = route;
+        mapRef.current.geoObjects.add(route);
+        
+        // getTime() returns seconds
+        const seconds = route.getTime();
+        const minutes = Math.ceil(seconds / 60);
+
+        setRouteResult({
+          distance: decodeHtml(route.getHumanLength()),
+          duration: decodeHtml(route.getHumanTime()),
+          duration_min: minutes
+        });
+        const bounds = route.getBounds();
+        if (bounds) {
+          mapRef.current.setBounds(bounds, { checkZoomRange: true, duration: 500, zoomMargin: 60 });
+        }
+        setIsBuilding(false);
+      })
+      .catch(() => setIsBuilding(false));
+  }, [clearRouteObj]);
+
+  // ── Tool mode switch: clear state when switching tools ────────────────────
+
+  const handleSetActiveTool = useCallback((tool: ActiveTool) => {
+    if (tool === 'none' || tool !== activeTool) {
+      // Clear ruler when leaving ruler mode
+      if (activeTool === 'ruler' || tool !== 'ruler') {
+        rulerPointsRef.current = [];
+        setRulerPoints([]);
+        if (rulerLineRef.current && mapRef.current) {
+          mapRef.current.geoObjects.remove(rulerLineRef.current);
+          rulerLineRef.current = null;
+        }
+      }
+      // Clear route when leaving route mode
+      if (activeTool === 'route' || tool !== 'route') {
+        routeWaypointsRef.current = [];
+        setRouteWaypoints([]);
+        setRouteResult(null);
+        clearRouteObj();
+      }
+    }
+    setActiveTool(tool);
+  }, [activeTool, clearRouteObj]);
+
+  // ── Map click handler ref — updated on every render for freshness ─────────
+
+  // Shared logic for adding a point in tool mode from any source (map click or marker click)
+  const mapClickCallbackRef = useRef<(coords: [number, number], name?: string) => void>(() => {});
+
+  mapClickCallbackRef.current = (coords: [number, number], name?: string) => {
+    const tool = activeToolRef.current;
+    
+    if (tool === 'none') {
+      if (activeLayers.includes('distance')) {
+        setDistanceCenter(coords);
+      }
+      return;
+    }
+
+    const pointName = name ?? `${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`;
+    const point: RoutePoint = { name: pointName, coords };
+
+    if (tool === 'ruler') {
+      const pts = rulerPointsRef.current;
+      if (pts.length >= 2) return;
+      const newPts = [...pts, point];
+      rulerPointsRef.current = newPts;
+      setRulerPoints(newPts);
+      updateRulerLine(newPts);
+    } else if (tool === 'route') {
+      const wps = routeWaypointsRef.current;
+      const newWps = [...wps, point];
+      routeWaypointsRef.current = newWps;
+      setRouteWaypoints([...newWps]);
+    }
+  };
+
+  // ── Queries ──────────────────────────────────────────────────────────────
 
   const { data: regionsData } = useQuery({
     queryKey: ['regions-geo'],
-    queryFn: () => geoApi.getRegions(true).then(res => res.data),
+    queryFn: () => geoApi.getRegions(undefined, true).then(res => res.data),
     enabled: regionsLayerActive && mapReady,
   });
 
@@ -185,13 +794,37 @@ export function MapPage() {
     enabled: mode === 'map',
   });
 
+  const { data: settlementsData } = useQuery({
+    queryKey: ['settlements-all'],
+    queryFn: () => geoApi.getSettlements().then(r => r.data),
+    enabled: mapReady,
+  });
+
   const features = featuresData?.features ?? [];
+
+  // ── Stats (filtered by current level) ────────────────────────────────────
+
+  const visibleFeatures = (() => {
+    let filtered = features;
+    if (mapLevel === 'settlement' && selectedSettlementId != null) {
+      filtered = features.filter((f: any) => f.properties.settlement_id === selectedSettlementId);
+    } else if (mapLevel === 'region' && selectedRegionId != null) {
+      filtered = features.filter((f: any) => f.properties.region_id === selectedRegionId);
+    }
+    if (mapLevel === 'country' || mapLevel === 'region') {
+      return filtered.filter((f: any) => f.properties.type === 'military_office');
+    }
+    return filtered;
+  })();
+
   const stats = {
-    total: features.length,
-    ready: features.filter((f: any) => f.properties.status === 'ready').length,
-    inProgress: features.filter((f: any) => f.properties.status === 'in_progress').length,
-    critical: features.filter((f: any) => f.properties.status === 'critical').length,
+    total: visibleFeatures.length,
+    ready: visibleFeatures.filter((f: any) => f.properties.status === 'ready').length,
+    inProgress: visibleFeatures.filter((f: any) => f.properties.status === 'in_progress').length,
+    critical: visibleFeatures.filter((f: any) => f.properties.status === 'critical').length,
   };
+
+  // ── Map initialization ────────────────────────────────────────────────────
 
   useEffect(() => {
     const init = () => {
@@ -199,37 +832,44 @@ export function MapPage() {
 
       window.ymaps.ready(() => {
         if (mapRef.current || !mapElRef.current) return;
-        
-        console.log('[Map] Initializing Yandex Maps instance...');
+
         mapRef.current = new window.ymaps.Map(mapElRef.current, {
           center: [48.0196, 66.9237],
           zoom: 5,
           controls: ['zoomControl', 'fullscreenControl'],
         });
-        
+
         mapRef.current.container.getElement().style.borderRadius = '0';
-        
+
         featuresCollectionRef.current = new window.ymaps.GeoObjectCollection();
+        settlementCollectionRef.current = new window.ymaps.GeoObjectCollection();
         regionsCollectionRef.current = new window.ymaps.GeoObjectCollection();
-        mapRef.current.geoObjects.add(featuresCollectionRef.current);
+        labelsCollectionRef.current = new window.ymaps.GeoObjectCollection();
+
         mapRef.current.geoObjects.add(regionsCollectionRef.current);
-        
+        mapRef.current.geoObjects.add(labelsCollectionRef.current);
+        mapRef.current.geoObjects.add(settlementCollectionRef.current);
+        mapRef.current.geoObjects.add(featuresCollectionRef.current);
+
+
+        // Map-level click: fires when user clicks on empty map area
+        mapRef.current.events.add('click', (e: any) => {
+          mapClickCallbackRef.current(e.get('coords'));
+        });
+
         setMapReady(true);
       });
     };
 
     const scriptId = 'yandex-maps-script';
-    let script = document.getElementById(scriptId) as HTMLScriptElement || 
-                 document.querySelector('script[src*="api-maps.yandex.ru"]');
+    let script = document.getElementById(scriptId) as HTMLScriptElement ||
+                 document.querySelector('script[src*="api-maps.yandex.ru"]') as HTMLScriptElement;
 
     if (window.ymaps) {
-      console.log('[Map] ymaps already exists, initializing...');
       init();
     } else if (script) {
-      console.log('[Map] Script already exists, waiting for load...');
       script.addEventListener('load', init);
     } else {
-      console.log('[Map] Creating new ymaps script tag...');
       script = document.createElement('script');
       script.id = scriptId;
       script.src = `https://api-maps.yandex.ru/2.1/?apikey=${import.meta.env.VITE_YANDEX_MAPS_KEY}&lang=ru_RU`;
@@ -239,105 +879,600 @@ export function MapPage() {
     }
 
     return () => {
-      if (script) {
-        script.removeEventListener('load', init);
-      }
+      if (script) script.removeEventListener('load', init);
     };
   }, [mode]);
 
+  // ── Map background toggle ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+    
+    if (mapBackground === 'white') {
+      map.setType(null);
+      // Optional: hide labels if possible or keep them
+      map.options.set('yandexMapAutoSkip', true);
+    } else {
+      map.setType('yandex#map');
+      map.options.set('yandexMapAutoSkip', false);
+    }
+  }, [mapBackground, mapReady]);
+
+  // ── Settlement cluster markers (country / region level) ───────────────────
+
+  useEffect(() => {
+    if (!mapReady || !settlementCollectionRef.current || !settlementsData) return;
+
+    const collection = settlementCollectionRef.current;
+    collection.removeAll();
+
+    if (mapLevel === 'settlement') return;
+
+    const groupMap: Record<number, { statuses: string[]; lat: number; lon: number; name: string }> = {};
+
+    features.forEach((feat: any) => {
+      const sid = feat.properties.settlement_id;
+      if (sid == null) return;
+      if (mapLevel === 'region' && selectedRegionId != null) {
+        if (feat.properties.region_id !== selectedRegionId) return;
+      }
+      if (!groupMap[sid]) {
+        const settlement = settlementsData.find((s: any) => s.settlement_id === sid);
+        if (!settlement || settlement.latitude == null || settlement.longitude == null) return;
+        groupMap[sid] = {
+          statuses: [],
+          lat: settlement.latitude,
+          lon: settlement.longitude,
+          name: settlement.name,
+        };
+      }
+      groupMap[sid].statuses.push(feat.properties.status);
+    });
+
+    Object.entries(groupMap).forEach(([sidStr, group]) => {
+      const sid = Number(sidStr);
+      const count = group.statuses.length;
+      const ws = worstStatus(group.statuses);
+      const color = STATUS_COLORS[ws] || '#6B7280';
+
+      const placemark = new window.ymaps.Placemark(
+        [group.lat, group.lon],
+        {
+          hintContent: `${group.name} (${count} объектов)`,
+          iconContent: String(count),
+        },
+        {
+          preset: 'islands#circleIcon',
+          iconColor: color,
+          cursor: activeToolRef.current !== 'none' ? 'crosshair' : 'pointer',
+        }
+      );
+
+      placemark.events.add('click', (e: any) => {
+        if (activeToolRef.current !== 'none') {
+          // In tool mode: add as waypoint/ruler point; stop event from bubbling
+          e.stopPropagation();
+          mapClickCallbackRef.current([group.lat, group.lon], group.name);
+          return;
+        }
+        selectSettlementLevel(sid, group.name);
+        if (mapRef.current) {
+          mapRef.current.setCenter([group.lat, group.lon], 13, { duration: 400 });
+        }
+      });
+
+      collection.add(placemark);
+
+      // Add settlement name label below the cluster
+      const settlementLabel = new window.ymaps.Placemark(
+        [group.lat, group.lon],
+        { iconContent: group.name },
+        {
+          iconLayout: window.ymaps.templateLayoutFactory.createClass(
+            `<div style="
+              position: absolute;
+              top: 24px;
+              left: 50%;
+              transform: translateX(-50%);
+              color: ${themeMode === 'dark' ? '#94A3B8' : '#475569'};
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              white-space: nowrap;
+              pointer-events: none;
+              text-shadow: ${themeMode === 'dark' ? '0 1px 2px rgba(0,0,0,0.8)' : '0 1px 1px rgba(255,255,255,0.8)'};
+              padding: 2px 4px;
+            ">$[properties.iconContent]</div>`
+          ),
+          interactive: false,
+          zIndex: 1,
+        }
+      );
+      collection.add(settlementLabel);
+    });
+  }, [features, mapReady, settlementsData, mapLevel, selectedRegionId, selectSettlementLevel]);
+
+  // ── Individual location markers (settlement level) ────────────────────────
+
   useEffect(() => {
     if (!mapReady || !featuresCollectionRef.current) return;
+
     const collection = featuresCollectionRef.current;
     collection.removeAll();
 
-    features.forEach((feat: any) => {
+    if (mapLevel !== 'settlement' || selectedSettlementId == null) return;
+
+    const settlementFeatures = features.filter(
+      (f: any) => f.properties.settlement_id === selectedSettlementId
+    );
+
+    settlementFeatures.forEach((feat: any) => {
       const [lon, lat] = feat.geometry.coordinates;
-      const color = getMarkerColor(feat.properties.status);
+      const typeConfig = LOCATION_TYPE_CONFIG[feat.properties.type];
+      const color = typeConfig ? typeConfig.color : '#6B7280';
 
       const placemark = new window.ymaps.Placemark(
         [lat, lon],
         {
           hintContent: feat.properties.name,
           balloonContent: `
-            <div style="padding:8px;font-family:sans-serif;">
-              <strong>${feat.properties.name}</strong><br/>
-              <small style="color:${color}">● ${feat.properties.status}</small>
+            <div style="
+              padding: 12px;
+              font-family: 'Inter', -apple-system, sans-serif;
+              color: #1E293B;
+              min-width: 180px;
+            ">
+              <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 4px; line-height: 1.2;">
+                ${feat.properties.name}
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                <span style="
+                  width: 8px; height: 8px; border-radius: 50%;
+                  background: ${STATUS_COLORS[feat.properties.status as StatusType] || '#888'};
+                  box-shadow: 0 0 8px ${STATUS_COLORS[feat.properties.status as StatusType] || '#888'}88;
+                "></span>
+                <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.02em;">
+                  ${typeConfig?.label || feat.properties.type}
+                </span>
+              </div>
+              <div style="font-size: 12px; color: #475569; line-height: 1.4;">
+                Статус: <strong style="color: ${STATUS_COLORS[feat.properties.status as StatusType]}">
+                  ${STATUS_LABELS[feat.properties.status as StatusType] || feat.properties.status}
+                </strong>
+              </div>
             </div>
           `,
         },
-        {
-          preset: 'islands#circleIcon',
-          iconColor: color,
-        }
+        getPlacemarkOptions(feat.properties.type, color)
       );
 
-      placemark.events.add('click', () => {
+      placemark.events.add('click', (e: any) => {
+        if (activeToolRef.current !== 'none') {
+          e.stopPropagation();
+          mapClickCallbackRef.current([lat, lon], feat.properties.name);
+          return;
+        }
         selectLocation(feat.properties.id, [
           { label: 'Казахстан' },
+          ...(selectedRegionName ? [{ label: selectedRegionName }] : []),
+          { label: selectedSettlementName },
           { label: feat.properties.name },
         ]);
       });
 
       collection.add(placemark);
+
+      // Add object name label below the icon
+      const label = new window.ymaps.Placemark(
+        [lat, lon],
+        { iconContent: feat.properties.name },
+        {
+          iconLayout: window.ymaps.templateLayoutFactory.createClass(
+            `<div style="
+              position: absolute;
+              top: 20px;
+              left: 50%;
+              transform: translateX(-50%);
+              background: ${themeMode === 'dark' ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.9)'};
+              padding: 2px 6px;
+              border-radius: 4px;
+              border: 1px solid ${themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+              color: ${themeMode === 'dark' ? '#F1F5F9' : '#1E293B'};
+              font-size: 10px;
+              font-weight: 600;
+              white-space: nowrap;
+              pointer-events: none;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              backdrop-filter: blur(4px);
+              z-index: -1;
+            ">$[properties.iconContent]</div>`
+          ),
+          interactive: false,
+        }
+      );
+      collection.add(label);
     });
-  }, [features, mapReady, selectLocation]);
+  }, [features, mapReady, mapLevel, selectedSettlementId, selectedRegionName, selectedSettlementName, selectLocation]);
+
+  // ── Region polygons ───────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!mapReady || !regionsCollectionRef.current) return;
     const collection = regionsCollectionRef.current;
     collection.removeAll();
+    labelsCollectionRef.current?.removeAll();
 
-    if (regionsLayerActive && regionsData) {
-      if (!Array.isArray(regionsData)) {
-        console.error('[Map] regionsData is not an array:', regionsData);
-        return;
-      }
+    if (!regionsLayerActive || !regionsData) return;
+    if (!Array.isArray(regionsData)) return;
 
-      const swap = (ring: number[][]) => ring.map((p) => [p[1], p[0]]);
+    const swap = (ring: number[][]) => ring.map((p) => [p[1], p[0]]);
 
-      regionsData.forEach((region: any) => {
-        if (!region.geometry_json) return;
+    regionsData.forEach((region: any) => {
+      if (!region.geometry_json) return;
+      try {
+        const geom = typeof region.geometry_json === 'string'
+          ? JSON.parse(region.geometry_json)
+          : region.geometry_json;
 
-        try {
-          const geom = typeof region.geometry_json === 'string'
-            ? JSON.parse(region.geometry_json)
-            : region.geometry_json;
+        const polygonRings: number[][][][] = [];
+        if (geom.type === 'Polygon') {
+          polygonRings.push(geom.coordinates.map(swap));
+        } else if (geom.type === 'MultiPolygon') {
+          geom.coordinates.forEach((poly: number[][][]) => polygonRings.push(poly.map(swap)));
+        }
 
-          // GeoJSON: Polygon = [ring, ...], MultiPolygon = [polygon, ...].
-          // Yandex Polygon expects [ring, ...] with [lat, lon] points.
-          const polygons: number[][][][] = [];
-          if (geom.type === 'Polygon') {
-            polygons.push(geom.coordinates.map(swap));
-          } else if (geom.type === 'MultiPolygon') {
-            geom.coordinates.forEach((poly: number[][][]) => {
-              polygons.push(poly.map(swap));
+        const regionPolygons: any[] = [];
+
+        const traceRegionBorder = (geomJson: any) => {
+          if (!mapElRef.current || !mapRef.current) return;
+          const mapEl = mapElRef.current;
+          const rect = mapEl.getBoundingClientRect();
+
+          const canvas = document.createElement('canvas');
+          canvas.width = rect.width;
+          canvas.height = rect.height;
+          Object.assign(canvas.style, {
+            position: 'absolute', top: '0', left: '0',
+            pointerEvents: 'none', zIndex: '6',
+          });
+          mapEl.appendChild(canvas);
+          const ctx = canvas.getContext('2d')!;
+
+          const g = typeof geomJson === 'string' ? JSON.parse(geomJson) : geomJson;
+          const projection = mapRef.current.options.get('projection');
+          const zoom = mapRef.current.getZoom();
+
+          const toCanvasPx = ([lon, lat]: number[]): [number, number] => {
+            const gPx = projection.toGlobalPixels([lat, lon], zoom);
+            const pPx = mapRef.current.converter.globalToPage(gPx);
+            return [pPx[0] - rect.left, pPx[1] - rect.top];
+          };
+
+          const rings: number[][][] =
+            g.type === 'Polygon'
+              ? [g.coordinates[0]]
+              : g.type === 'MultiPolygon'
+                ? g.coordinates.map((p: number[][][]) => p[0])
+                : [];
+
+          type Seg = { x1: number; y1: number; x2: number; y2: number; len: number };
+          const paths = rings.map(ring => {
+            const pts = ring.map(toCanvasPx);
+            const segs: Seg[] = [];
+            let total = 0;
+            for (let i = 0; i < pts.length - 1; i++) {
+              const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+              const len = Math.hypot(x2 - x1, y2 - y1);
+              segs.push({ x1, y1, x2, y2, len });
+              total += len;
+            }
+            return { segs, total };
+          });
+
+          const DURATION = 850;
+          const start = performance.now();
+
+          const tick = (now: number) => {
+            const p = Math.min((now - start) / DURATION, 1);
+            const eased = p < 1 ? 1 - Math.pow(1 - p, 2.5) : 1;
+            const alpha = p > 0.75 ? 1 - (p - 0.75) / 0.25 : 1;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#BFDBFE';
+            ctx.shadowColor = '#60A5FA';
+            ctx.shadowBlur = 18;
+
+            paths.forEach(({ segs, total }) => {
+              let rem = eased * total;
+              ctx.beginPath();
+              let started = false;
+              for (const s of segs) {
+                if (rem <= 0) break;
+                if (!started) { ctx.moveTo(s.x1, s.y1); started = true; }
+                if (rem >= s.len) {
+                  ctx.lineTo(s.x2, s.y2);
+                  rem -= s.len;
+                } else {
+                  const r = rem / s.len;
+                  ctx.lineTo(s.x1 + (s.x2 - s.x1) * r, s.y1 + (s.y2 - s.y1) * r);
+                  rem = 0;
+                }
+              }
+              ctx.stroke();
+            });
+
+            ctx.restore();
+            if (p < 1) requestAnimationFrame(tick);
+            else canvas.remove();
+          };
+
+          requestAnimationFrame(tick);
+        };
+
+        const handleRegionClick = () => {
+          selectRegionLevel(region.region_id, region.name);
+
+          setTimeout(() => traceRegionBorder(region.geometry_json), 550);
+
+          let combinedBounds: [[number, number], [number, number]] | null = null;
+          regionPolygons.forEach((p) => {
+            const b = p.geometry.getBounds();
+            if (!b) return;
+            if (!combinedBounds) {
+              combinedBounds = b;
+            } else {
+              combinedBounds = [
+                [Math.min(combinedBounds[0][0], b[0][0]), Math.min(combinedBounds[0][1], b[0][1])],
+                [Math.max(combinedBounds[1][0], b[1][0]), Math.max(combinedBounds[1][1], b[1][1])],
+              ];
+            }
+          });
+
+          if (combinedBounds && mapRef.current) {
+            mapRef.current.setBounds(combinedBounds, {
+              checkZoomRange: true,
+              duration: 500,
+              zoomMargin: 40,
             });
           }
+        };
 
-          polygons.forEach((rings) => {
-            const polygon = new window.ymaps.Polygon(rings, {
-              hintContent: region.name,
-              balloonContent: `<strong>${region.name}</strong>`,
-            }, {
-              fillColor: '#3B82F6',
-              fillOpacity: 0.15,
-              strokeColor: '#3B82F6',
-              strokeWidth: 1.5,
-            });
-            collection.add(polygon);
+        polygonRings.forEach((rings) => {
+          const polygon = new window.ymaps.Polygon(rings, {
+            hintContent: region.name,
+          }, {
+            fillColor: '#3B82F6',
+            fillOpacity: 0.08,
+            strokeColor: '#3B82F6',
+            strokeWidth: 2.0,
+            cursor: activeToolRef.current !== 'none' ? 'crosshair' : 'pointer',
           });
-        } catch (e) {
-          console.error('Error rendering region', region.name, e);
+
+          polygon.events.add('mouseenter', () => {
+            polygon.options.set({ fillOpacity: 0.2, strokeWidth: 3.0 });
+          });
+          polygon.events.add('mouseleave', () => {
+            polygon.options.set({ fillOpacity: 0.08, strokeWidth: 2.0 });
+          });
+          polygon.events.add('click', (e: any) => {
+            if (activeToolRef.current !== 'none') {
+              e.stopPropagation();
+              mapClickCallbackRef.current(e.get('coords'));
+              return;
+            }
+            e.stopPropagation();
+            handleRegionClick();
+          });
+
+          regionPolygons.push(polygon);
+          collection.add(polygon);
+        });
+
+        // Add region name label
+        if (region.center_lat && region.center_lon) {
+          const displayName = region.name.replace(/ ОБЛАСТЬ$/i, '').replace(/-/g, '-<br/>');
+          const label = new window.ymaps.Placemark(
+            [region.center_lat, region.center_lon],
+            { iconContent: displayName },
+            {
+              iconLayout: window.ymaps.templateLayoutFactory.createClass(
+                themeMode === 'dark'
+                  ? `<div style="
+                      position: absolute;
+                      transform: translate(-50%, -50%);
+                      width: max-content;
+                      color: #F1F5F9;
+                      font-size: 9px;
+                      font-weight: 800;
+                      font-family: 'Inter', -apple-system, sans-serif;
+                      text-transform: uppercase;
+                      letter-spacing: 0.1em;
+                      line-height: 1.4;
+                      text-align: center;
+                      white-space: nowrap;
+                      pointer-events: none;
+                      user-select: none;
+                      text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1);
+                    ">$[properties.iconContent]</div>`
+                  : `<div style="
+                      position: absolute;
+                      transform: translate(-50%, -50%);
+                      width: max-content;
+                      color: #334155;
+                      font-size: 9px;
+                      font-weight: 700;
+                      font-family: 'Inter', -apple-system, sans-serif;
+                      text-transform: uppercase;
+                      letter-spacing: 0.1em;
+                      line-height: 1.4;
+                      text-align: center;
+                      white-space: nowrap;
+                      pointer-events: none;
+                      user-select: none;
+                      padding: 2px 6px;
+                      background: rgba(255,255,255,0.7);
+                      border-radius: 3px;
+                      text-shadow: none;
+                      backdrop-filter: blur(4px);
+                    ">$[properties.iconContent]</div>`
+              ),
+              iconShape: { type: 'Rectangle', coordinates: [[0, 0], [0, 0]] },
+              interactive: false,
+              zIndex: 1,
+            }
+          );
+          if (labelsCollectionRef.current) {
+            labelsCollectionRef.current.add(label);
+          } else {
+            collection.add(label);
+          }
         }
-      });
+      } catch (err) {
+        console.error('Error rendering region', region.name, err);
+      }
+    });
+
+  }, [regionsData, regionsLayerActive, mapReady, selectRegionLevel]);
+
+  // ── Fly to region when selectedRegionId changes ───────────────────────────
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || selectedRegionId == null || !regionsData) return;
+    const region = Array.isArray(regionsData)
+      ? regionsData.find((r: any) => r.region_id === selectedRegionId)
+      : null;
+    if (region?.center_lat && region?.center_lon) {
+      mapRef.current.setCenter([region.center_lat, region.center_lon], 8, { duration: 500 });
     }
-  }, [regionsData, regionsLayerActive, mapReady]);
+  }, [selectedRegionId, mapLevel, mapReady, regionsData]);
+
+  // ── Fly to settlement when selectedSettlementId changes ──────────────────
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || selectedSettlementId == null || !settlementsData) return;
+    const settlement = Array.isArray(settlementsData)
+      ? settlementsData.find((s: any) => s.settlement_id === selectedSettlementId)
+      : null;
+    if (settlement?.latitude && settlement?.longitude) {
+      mapRef.current.setCenter([settlement.latitude, settlement.longitude], 13, { duration: 500 });
+    }
+  }, [selectedSettlementId, mapReady, settlementsData]);
+
+  // ── Distance from Base Layer (Circles) ───────────────────────────────────
+  const distanceLayerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !window.ymaps) return;
+    const map = mapRef.current;
+    const active = activeLayers.includes('distance');
+
+    if (distanceLayerRef.current) {
+      map.geoObjects.remove(distanceLayerRef.current);
+      distanceLayerRef.current = null;
+    }
+
+    if (active) {
+      const collection = new window.ymaps.GeoObjectCollection();
+      const center = distanceCenter || KZ_CENTER;
+      
+      // Draggable center point
+      const centerMarker = new window.ymaps.Placemark(center, {
+        hintContent: 'Центр замера (перетащите, чтобы изменить)',
+        balloonContent: 'Центр замера дальности',
+        iconContent: '📏'
+      }, {
+        preset: 'islands#blackCircleIcon',
+        draggable: true,
+        zIndex: 1000,
+        // When dragging, we don't update store immediately to avoid too many re-renders,
+        // we update on dragend
+      });
+
+      centerMarker.events.add('dragend', () => {
+        const newCoords = centerMarker.geometry.getCoordinates();
+        setDistanceCenter(newCoords);
+      });
+
+      collection.add(centerMarker);
+
+      // concentric circles to show distance zones from center
+      const zones = [
+        { radius: 50000, color: '#22C55E', label: '50 км' },
+        { radius: 150000, color: '#F59E0B', label: '150 км' },
+        { radius: 300000, color: '#EF4444', label: '300 км' },
+      ];
+
+      zones.slice().reverse().forEach(zone => {
+        const circle = new window.ymaps.Circle([center, zone.radius], {
+          hintContent: `Зона ${zone.label}`,
+        }, {
+          fillColor: zone.color,
+          fillOpacity: 0.05,
+          strokeColor: zone.color,
+          strokeOpacity: 0.2,
+          strokeWidth: 1,
+          interactive: false
+        });
+        collection.add(circle);
+
+        // Visible label on the edge of the circle
+        const R_EARTH = 6378137;
+        const dLat = (zone.radius / R_EARTH) * (180 / Math.PI);
+        const labelPos: [number, number] = [center[0] + dLat, center[1]];
+
+        const label = new window.ymaps.Placemark(labelPos, {
+          iconContent: zone.label
+        }, {
+          iconLayout: window.ymaps.templateLayoutFactory.createClass(
+            `<div style="
+              background: white;
+              padding: 2px 6px;
+              border-radius: 4px;
+              border: 1px solid ${zone.color}44;
+              color: ${zone.color};
+              font-size: 10px;
+              font-weight: 800;
+              white-space: nowrap;
+              transform: translate(-50%, -50%);
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              pointer-events: none;
+            ">$[properties.iconContent]</div>`
+          ),
+          interactive: false,
+          zIndex: 900
+        });
+        collection.add(label);
+      });
+
+      map.geoObjects.add(collection);
+      distanceLayerRef.current = collection;
+    }
+  }, [activeLayers, mapReady, distanceCenter, setDistanceCenter]);
+
+  // ── Reset view when returning to country level ───────────────────────────
+  useEffect(() => {
+    if (mapReady && mapRef.current && mapLevel === 'country') {
+      mapRef.current.setCenter(KZ_CENTER, KZ_ZOOM, { duration: 500 });
+    }
+  }, [mapLevel, mapReady]);
+
+  // ── Ruler distance ────────────────────────────────────────────────────────
+  const rulerDistanceKm = rulerPoints.length === 2
+    ? haversineKm(rulerPoints[0].coords, rulerPoints[1].coords)
+    : null;
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <Container>
       <MapContainer>
-        <YMapEl ref={mapElRef} />
+        <YMapEl ref={mapElRef} $whiteBg={mapBackground === 'white'} />
 
+        {/* Filters button */}
         <FiltersBtn
           onClick={() => setShowFilters((v) => !v)}
           whileHover={{ scale: 1.02 }}
@@ -346,7 +1481,7 @@ export function MapPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <span>⚙️</span> Фильтры
+          <span>*</span> Фильтры
           {(filters.statuses.length > 0 || filters.regions.length > 0) && (
             <span style={{
               background: '#3B82F6',
@@ -361,13 +1496,14 @@ export function MapPage() {
           )}
         </FiltersBtn>
 
+        {/* Stats bar */}
         <StatsBar
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
           <StatItem>
-            <span style={{ fontSize: 11 }}>Всего</span>
+            <span className="hide-mobile" style={{ fontSize: 11 }}>Всего</span>
             <StatNum>{stats.total}</StatNum>
           </StatItem>
           <StatItem>
@@ -384,37 +1520,166 @@ export function MapPage() {
           </StatItem>
         </StatsBar>
 
+        {/* Breadcrumb bar */}
+        <AnimatePresence>
+          {mapLevel !== 'country' && (
+            <BreadcrumbBar
+              key="breadcrumb"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <BreadLink onClick={handleBackToCountry}>Казахстан</BreadLink>
+              {mapLevel === 'region' && (
+                <>
+                  <BreadSep>/</BreadSep>
+                  <BreadCurrent>{selectedRegionName}</BreadCurrent>
+                </>
+              )}
+              {mapLevel === 'settlement' && (
+                <>
+                  <BreadSep>/</BreadSep>
+                  <BreadLink onClick={handleBackToRegion}>{selectedRegionName || 'Область'}</BreadLink>
+                  <BreadSep>/</BreadSep>
+                  <BreadCurrent>{selectedSettlementName}</BreadCurrent>
+                </>
+              )}
+            </BreadcrumbBar>
+          )}
+        </AnimatePresence>
+
+        {/* Layer toggle panel */}
         <LayerPanel
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <LayerTitle>Слои</LayerTitle>
+          <LayerTitle>Слои данных</LayerTitle>
           {LAYERS.map((layer) => (
             <LayerToggle
               key={layer.id}
               $active={activeLayers.includes(layer.id)}
               onClick={() => toggleLayer(layer.id)}
+              whileHover={{ x: 3 }}
               whileTap={{ scale: 0.97 }}
             >
-              <span>{layer.icon}</span>
+              <LayerIcon>
+                {layer.icon.startsWith('/') ? (
+                  <img src={layer.icon} alt={layer.label} />
+                ) : (
+                  layer.icon
+                )}
+              </LayerIcon>
               {layer.label}
             </LayerToggle>
           ))}
+
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+          <LayerTitle>Фон карты</LayerTitle>
+          <LayerToggle
+            $active={mapBackground === 'yandex'}
+            onClick={() => setMapBackground('yandex')}
+            whileHover={{ x: 3 }}
+          >
+            <LayerIcon>
+              <img src="/icons/map.png" alt="" />
+            </LayerIcon> Стандарт
+          </LayerToggle>
+          <LayerToggle
+            $active={mapBackground === 'white'}
+            onClick={() => setMapBackground('white')}
+            whileHover={{ x: 3 }}
+          >
+            <LayerIcon>📄</LayerIcon> Схематичный
+          </LayerToggle>
         </LayerPanel>
 
+        {/* Level indicator */}
+        <LevelIndicator
+          key={mapLevel}
+          $level={mapLevel}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          УРОВЕНЬ: {LEVEL_LABELS[mapLevel] || mapLevel}
+        </LevelIndicator>
+
+        {/* Add button */}
+        {canAdd && (
+          <AddBtn
+            onClick={openAddModal}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            + Добавить объект
+          </AddBtn>
+        )}
+
+        {/* Map tools: Линейка + Планировщик маршрута */}
+        <MapToolsPanel
+          activeTool={activeTool}
+          onSetActiveTool={handleSetActiveTool}
+          rulerPoints={rulerPoints}
+          rulerDistanceKm={rulerDistanceKm}
+          onClearRuler={clearRuler}
+          routeWaypoints={routeWaypoints}
+          routeResult={routeResult}
+          isBuilding={isBuilding}
+          onRemoveWaypoint={removeWaypoint}
+          onMoveWaypoint={moveWaypoint}
+          onOptimizeRoute={optimizeRoute}
+          onBuildRoute={buildRoute}
+          onClearRoute={clearRoute}
+          onSendToEngineer={handleSendToEngineer}
+        />
+
+        {/* Filters panel */}
         <AnimatePresence>
           {showFilters && (
             <MapFiltersPanel onClose={() => setShowFilters(false)} />
           )}
         </AnimatePresence>
-      </MapContainer>
 
-      <AnimatePresence>
-        {mode === 'detail' && selectedLocationId && (
-          <LocationDetail key={selectedLocationId} locationId={selectedLocationId} />
-        )}
-      </AnimatePresence>
+        {/* Add modal */}
+        <AnimatePresence>
+          {showAddModal && (
+            <AddLocationModal onClose={closeAddModal} />
+          )}
+        </AnimatePresence>
+
+        {/* Task modal for route sending */}
+        <AnimatePresence>
+          {showTaskModal && (
+            <TaskModal
+              task={prefilledTask}
+              onClose={() => {
+                setShowTaskModal(false);
+                setPrefilledTask(null);
+              }}
+              onSave={async (data) => {
+                await tasksApi.create(data);
+                setShowTaskModal(false);
+                setPrefilledTask(null);
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Sidebar Detail */}
+        <AnimatePresence>
+          {selectedLocationId ? (
+            <LocationDetail key={selectedLocationId} locationId={selectedLocationId} />
+          ) : (mapLevel === 'settlement' && selectedSettlementId !== null) ? (
+            <SettlementDetail key={selectedSettlementId} />
+          ) : (mapLevel === 'region' && selectedRegionId !== null) ? (
+            <RegionDetail key={selectedRegionId} />
+          ) : null}
+        </AnimatePresence>
+      </MapContainer>
     </Container>
   );
 }

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { BreadcrumbItem, MapFilters } from '@/types';
 
 interface MapViewState {
+  // Existing
   mode: 'map' | 'detail';
   selectedLocationId: string | null;
   breadcrumb: BreadcrumbItem[];
@@ -10,11 +11,33 @@ interface MapViewState {
   filters: MapFilters;
   activeLayers: string[];
 
+  // New hierarchy state
+  mapLevel: 'country' | 'region' | 'settlement';
+  selectedRegionId: number | null;
+  selectedSettlementId: number | null;
+  selectedRegionName: string;
+  selectedSettlementName: string;
+  showAddModal: boolean;
+
+  mapBackground: 'yandex' | 'white';
+  distanceCenter: [number, number] | null;
+
+  // Existing actions
   selectLocation: (id: string, breadcrumb: BreadcrumbItem[]) => void;
   backToMap: () => void;
   saveMapState: (center: [number, number], zoom: number) => void;
   setFilters: (filters: Partial<MapFilters>) => void;
   toggleLayer: (layer: string) => void;
+  setMapBackground: (bg: 'yandex' | 'white') => void;
+  setDistanceCenter: (coords: [number, number] | null) => void;
+
+  // New actions
+  selectRegionLevel: (regionId: number, regionName: string) => void;
+  selectSettlementLevel: (settlementId: number, settlementName: string) => void;
+  backToCountry: () => void;
+  backToRegion: () => void;
+  openAddModal: () => void;
+  closeAddModal: () => void;
 }
 
 const defaultFilters: MapFilters = {
@@ -32,8 +55,19 @@ export const useMapViewStore = create<MapViewState>((set, get) => ({
   savedCenter: null,
   savedZoom: null,
   filters: defaultFilters,
+  mapBackground: 'yandex',
   activeLayers: ['statuses', 'regions'],
+  distanceCenter: null,
 
+  // New hierarchy state
+  mapLevel: 'country',
+  selectedRegionId: null,
+  selectedSettlementId: null,
+  selectedRegionName: '',
+  selectedSettlementName: '',
+  showAddModal: false,
+
+  // Existing actions
   selectLocation: (id, breadcrumb) =>
     set({ mode: 'detail', selectedLocationId: id, breadcrumb }),
 
@@ -54,4 +88,47 @@ export const useMapViewStore = create<MapViewState>((set, get) => ({
         : [...current, layer],
     });
   },
+
+  setMapBackground: (bg) => set({ mapBackground: bg }),
+  setDistanceCenter: (coords) => set({ distanceCenter: coords }),
+
+  // New hierarchy actions
+  selectRegionLevel: (regionId, regionName) =>
+    set({
+      mode: 'map',
+      selectedLocationId: null,
+      mapLevel: 'region',
+      selectedRegionId: regionId,
+      selectedRegionName: regionName,
+      selectedSettlementId: null,
+      selectedSettlementName: '',
+    }),
+
+  selectSettlementLevel: (settlementId, settlementName) =>
+    set({
+      mode: 'map',
+      selectedLocationId: null,
+      mapLevel: 'settlement',
+      selectedSettlementId: settlementId,
+      selectedSettlementName: settlementName,
+    }),
+
+  backToCountry: () =>
+    set({
+      mapLevel: 'country',
+      selectedRegionId: null,
+      selectedRegionName: '',
+      selectedSettlementId: null,
+      selectedSettlementName: '',
+    }),
+
+  backToRegion: () =>
+    set({
+      mapLevel: 'region',
+      selectedSettlementId: null,
+      selectedSettlementName: '',
+    }),
+
+  openAddModal: () => set({ showAddModal: true }),
+  closeAddModal: () => set({ showAddModal: false }),
 }));

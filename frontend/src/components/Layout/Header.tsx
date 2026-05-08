@@ -2,15 +2,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { authApi } from '@/services/api';
+import { authApi, telegramApi } from '@/services/api';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useNotificationStore } from '@/features/notifications/useNotificationStore';
+import { useThemeStore } from '@/styles/useThemeStore';
+import { useMapViewStore } from '@/features/map/useMapViewStore';
 
 const Bar = styled(motion.header)`
   height: 56px;
-  background: rgba(10, 18, 40, 0.9);
+  background: ${({ theme }) => theme.colors.glass};
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   align-items: center;
   padding: 0 20px;
@@ -51,8 +54,11 @@ const BrandIcon = styled.div`
 const BrandName = styled.span`
   font-weight: 700;
   font-size: 14px;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
   letter-spacing: -0.01em;
+  @media (max-width: 640px) {
+    display: none;
+  }
 `;
 
 const Nav = styled.nav`
@@ -70,20 +76,31 @@ const NavItem = styled(NavLink)`
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #64748B;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-decoration: none;
   transition: all 150ms ease;
   white-space: nowrap;
 
   &:hover {
-    color: #F1F5F9;
-    background: rgba(255,255,255,0.06);
+    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.bgHover};
   }
 
   &.active {
-    color: #60A5FA;
-    background: rgba(59,130,246,0.1);
-    border: 1px solid rgba(59,130,246,0.15);
+    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.primaryGlow};
+    border: 1px solid ${({ theme }) => theme.colors.primaryGlow};
+  }
+
+  span:last-child {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px;
+    font-size: 18px;
   }
 `;
 
@@ -99,14 +116,14 @@ const UserButton = styled(motion.button)`
   align-items: center;
   gap: 8px;
   padding: 6px 12px 6px 6px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: ${({ theme }) => theme.colors.bgSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 10px;
-  color: #F1F5F9;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 13px;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); }
+  &:hover { background: ${({ theme }) => theme.colors.bgHover}; border-color: ${({ theme }) => theme.colors.borderHover}; }
 `;
 
 const Avatar = styled.div`
@@ -125,11 +142,14 @@ const Avatar = styled.div`
 
 const RoleBadge = styled.span`
   font-size: 10px;
-  color: #64748B;
+  color: ${({ theme }) => theme.colors.textMuted};
   padding: 2px 8px;
   border-radius: 9999px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: ${({ theme }) => theme.colors.bgSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  @media (max-width: 1024px) {
+    display: none;
+  }
 `;
 
 const Dropdown = styled(motion.div)`
@@ -137,13 +157,13 @@ const Dropdown = styled(motion.div)`
   top: 52px;
   right: 16px;
   width: 200px;
-  background: rgba(15, 23, 42, 0.95);
+  background: ${({ theme }) => theme.colors.bgCard};
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
   padding: 6px;
   z-index: 200;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  box-shadow: ${({ theme }) => theme.shadows.lg};
 `;
 
 const DropItem = styled(motion.button)`
@@ -154,11 +174,54 @@ const DropItem = styled(motion.button)`
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 13px;
-  color: #94A3B8;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: rgba(255,255,255,0.06); color: #F1F5F9; }
-  &.danger { color: #EF4444; &:hover { background: rgba(239,68,68,0.1); } }
+  &:hover { background: ${({ theme }) => theme.colors.bgHover}; color: ${({ theme }) => theme.colors.textPrimary}; }
+  &.danger { color: ${({ theme }) => theme.colors.critical}; &:hover { background: ${({ theme }) => theme.colors.criticalBg}; } }
+`;
+
+const HeaderIconButton = styled(motion.button)`
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.bgSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 150ms;
+  font-size: 18px;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.bgHover};
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border-color: ${({ theme }) => theme.colors.borderHover};
+  }
+`;
+
+const NotificationButton = styled(HeaderIconButton)``;
+
+const ThemeToggle = styled(HeaderIconButton)`
+  font-size: 16px;
+`;
+
+const Badge = styled(motion.span)`
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: ${({ theme }) => theme.colors.critical};
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 8px;
+  border: 2px solid ${({ theme }) => theme.colors.bg};
+  min-width: 18px;
+  text-align: center;
 `;
 
 const ROLE_LABELS: Record<string, string> = {
@@ -171,16 +234,77 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const NAV_ITEMS = [
-  { to: '/map', icon: '🗺️', label: 'Карта' },
-  { to: '/dashboard', icon: '📊', label: 'Аналитика', roles: ['superadmin', 'director', 'regional_manager', 'analyst'] },
-  { to: '/tasks', icon: '✅', label: 'Задачи' },
+  { to: '/map', icon: '/icons/map.png', label: 'Карта' },
+  { to: '/dashboard', icon: '/icons/analytics.png', label: 'Аналитика', roles: ['superadmin', 'director', 'regional_manager', 'analyst'] },
+  { to: '/tasks', icon: '/icons/tasks.png', label: 'Задачи' },
+  { to: '/district-accounts', icon: '🔑', label: 'Учетки', roles: ['superadmin', 'director', 'regional_manager'] },
   { to: '/admin', icon: '⚙️', label: 'Управление', roles: ['superadmin'] },
 ];
+
+
+const SearchButton = styled(motion.button)`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: ${({ theme }) => theme.colors.bgSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 150ms;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.bgHover};
+    color: ${({ theme }) => theme.colors.textSecondary};
+    border-color: ${({ theme }) => theme.colors.borderHover};
+  }
+
+  @media (max-width: 640px) {
+    padding: 6px 10px;
+    gap: 4px;
+  }
+`;
+
+const SearchKbd = styled.span`
+  font-size: 10px;
+  background: ${({ theme }) => theme.colors.bgHover};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 4px;
+  padding: 1px 5px;
+  @media (max-width: 640px) {
+    display: none;
+  }
+`;
+
+const NavIcon = styled.span`
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  img {
+    width: 130%;
+    height: 130%;
+    object-fit: contain;
+    mask-image: radial-gradient(circle, black 50%, transparent 90%);
+    -webkit-mask-image: radial-gradient(circle, black 50%, transparent 90%);
+  }
+`;
 
 export function Header() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  
+  const { notifications, toggleDrawer } = useNotificationStore();
+  const { themeMode, toggleTheme } = useThemeStore();
+  const { selectedSettlementId } = useMapViewStore();
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const initials = user?.full_name
     ? user.full_name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -203,21 +327,69 @@ export function Header() {
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <Brand to="/map">
-        <BrandIcon>🗺️</BrandIcon>
+        <NavIcon>
+          <img src="/icons/map.png" alt="Map" />
+        </NavIcon>
         <BrandName>eMap</BrandName>
       </Brand>
 
       <Nav>
-        {visibleNav.map((item) => (
-          <NavItem key={item.to} to={item.to}>
-            <span>{item.icon}</span>
-            {item.label}
-          </NavItem>
-        ))}
+        {visibleNav.map((item) => {
+          const to = item.to === '/district-accounts' && selectedSettlementId
+            ? `/district-accounts?settlement_id=${selectedSettlementId}`
+            : item.to;
+          return (
+            <NavItem key={item.to} to={to}>
+              <NavIcon>
+                {item.icon.startsWith('/') ? (
+                  <img src={item.icon} alt={item.label} />
+                ) : (
+                  item.icon
+                )}
+              </NavIcon>
+              <span>{item.label}</span>
+            </NavItem>
+          );
+        })}
       </Nav>
 
       <Right>
         {user && <RoleBadge>{ROLE_LABELS[user.role] || user.role}</RoleBadge>}
+
+        <ThemeToggle
+          onClick={() => toggleTheme()}
+          whileTap={{ scale: 0.9 }}
+          title={themeMode === 'light' ? 'Переключить на темную тему' : 'Переключить на светлую тему'}
+        >
+          <NavIcon>{themeMode === 'light' ? '🌙' : '☀️'}</NavIcon>
+        </ThemeToggle>
+
+        <SearchButton
+          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k', bubbles: true }))}
+          whileTap={{ scale: 0.97 }}
+        >
+          <NavIcon>🔍</NavIcon>
+          <span>Поиск</span>
+          <SearchKbd>Ctrl+K</SearchKbd>
+        </SearchButton>
+
+        <NotificationButton
+          onClick={toggleDrawer}
+          whileTap={{ scale: 0.9 }}
+        >
+          <NavIcon>🔔</NavIcon>
+          <AnimatePresence>
+            {unreadCount > 0 && (
+              <Badge
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+              >
+                {unreadCount}
+              </Badge>
+            )}
+          </AnimatePresence>
+        </NotificationButton>
 
         <UserButton
           onClick={() => setShowMenu((v) => !v)}
@@ -227,7 +399,7 @@ export function Header() {
           <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {user?.full_name || user?.username}
           </span>
-          <span style={{ fontSize: 10, color: '#475569', marginLeft: 2 }}>▾</span>
+          <span style={{ fontSize: 10, color: 'currentColor', marginLeft: 2, opacity: 0.5 }}>▾</span>
         </UserButton>
 
         <AnimatePresence>
@@ -246,6 +418,16 @@ export function Header() {
                 exit={{ opacity: 0, scale: 0.95, y: -8 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               >
+                {!user?.telegram_chat_id && (
+                  <DropItem onClick={async () => {
+                    const { data } = await telegramApi.getBindCode();
+                    const botUsername = "eMedosmotrBot"; // This should be in config
+                    window.open(`https://t.me/${botUsername}?start=bind_${data.code}`, '_blank');
+                    setShowMenu(false);
+                  }}>
+                    <span>🤖</span> Привязать Telegram
+                  </DropItem>
+                )}
                 <DropItem className="danger" onClick={handleLogout}>
                   <span>🚪</span> Выйти
                 </DropItem>

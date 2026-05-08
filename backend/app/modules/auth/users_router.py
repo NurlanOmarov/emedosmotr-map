@@ -7,13 +7,43 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import CurrentUser, require_roles
+from app.middleware.auth import CurrentUser, get_current_user, require_roles
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me/notification-settings", response_model=UserResponse)
+async def update_notification_settings(
+    settings: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    current_user.notification_settings = settings
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
+@router.get("/engineers", response_model=list[UserResponse])
+async def list_engineers(
+    region_id: int | None = Query(None),
+    _: User = Depends(require_roles("superadmin", "regional_manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    q = select(User).where(User.role == "engineer", User.deleted_at.is_(None))
+    if region_id:
+        q = q.where(User.region_id == region_id)
+    result = await db.execute(q)
+    return result.scalars().all()
 
 
 @router.get("", response_model=PaginatedResponse[UserResponse])

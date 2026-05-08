@@ -3,16 +3,23 @@ import { AnimatePresence } from 'framer-motion';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { GlobalStyles } from '@/styles/GlobalStyles';
-import { theme } from '@/styles/theme';
+import { darkTheme, lightTheme } from '@/styles/theme';
+import { useThemeStore } from '@/styles/useThemeStore';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Header } from '@/components/Layout/Header';
 import { LoginPage } from '@/pages/Login';
 import { MapPage } from '@/pages/Map';
 import { DashboardPage } from '@/pages/Dashboard';
 import { TasksPage } from '@/pages/Tasks';
+import { DistrictAccountsPage } from '@/pages/DistrictAccounts';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { UserList } from '@/pages/Admin/Users/UserList';
+import { ToastContainer } from '@/features/notifications/ToastContainer';
+import { NotificationDrawer } from '@/features/notifications/NotificationDrawer';
+import { GlobalSearch } from '@/components/GlobalSearch';
+import { wsService } from '@/services/websocket';
+import { useEffect, useState } from 'react';
 
 const qc = new QueryClient({
   defaultOptions: {
@@ -125,6 +132,24 @@ function AnimatedRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/district-accounts"
+          element={
+            <ProtectedRoute roles={['superadmin', 'director', 'regional_manager']}>
+              <AppShell>
+                <Header />
+                <PageWrapper
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <DistrictAccountsPage />
+                </PageWrapper>
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
         <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
         <Route path="/" element={<Navigate to="/map" replace />} />
         <Route path="*" element={<Navigate to="/map" replace />} />
@@ -134,11 +159,49 @@ function AnimatedRoutes() {
 }
 
 export function App() {
+  const { isAuthenticated } = useAuthStore();
+  const { themeMode } = useThemeStore();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const currentTheme = themeMode === 'light' ? lightTheme : darkTheme;
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        if (isAuthenticated) setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      wsService.connect('/ws/map');
+      wsService.connect('/ws/tasks');
+
+      // Request push notification permission on first entry if supported
+      if ('Notification' in window && Notification.permission === 'default') {
+        // Delay a bit to not overwhelm the user immediately
+        const timer = setTimeout(() => {
+          Notification.requestPermission();
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      wsService.disconnectAll();
+    }
+  }, [isAuthenticated]);
+
   return (
     <QueryClientProvider client={qc}>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={currentTheme}>
         <GlobalStyles />
         <AnimatedRoutes />
+        <ToastContainer />
+        <NotificationDrawer />
+        <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
       </ThemeProvider>
     </QueryClientProvider>
   );

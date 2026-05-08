@@ -6,26 +6,37 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       manifest: {
         name: 'eMedosmotr Map',
         short_name: 'eMap',
-        start_url: '/map',
+        description: 'Система мониторинга внедрения медицинского оборудования',
+        start_url: '/',
         display: 'standalone',
         theme_color: '#1E3A5F',
         background_color: '#0F172A',
         icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      },
-      workbox: {
-        runtimeCaching: [
           {
-            urlPattern: /\/api\/geo\//,
-            handler: 'CacheFirst',
-            options: { cacheName: 'geo-cache', expiration: { maxAgeSeconds: 48 * 3600 } },
+            src: '/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
           },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          }
         ],
       },
     }),
@@ -33,8 +44,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true },
-      '/ws': { target: 'ws://localhost:8000', ws: true },
+      '/api': { target: 'http://localhost:8002', changeOrigin: true },
+      '/ws': { target: 'ws://localhost:8002', ws: true },
+      '/uploads': { target: 'http://localhost:8002', changeOrigin: true },
     },
   },
   resolve: {

@@ -2,62 +2,63 @@ import { motion } from 'framer-motion';
 import styled, { css } from 'styled-components';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-type Size = 'sm' | 'md' | 'lg';
+type Size = 'xs' | 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<React.ComponentPropsWithoutRef<'button'>, 'onAnimationStart' | 'onDragStart' | 'onDrag' | 'onDragEnd'> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
   icon?: React.ReactNode;
 }
 
-const variantStyles: Record<Variant, ReturnType<typeof css>> = {
-  primary: css`
-    background: linear-gradient(135deg, #3B82F6, #2563EB);
+const variantStyles = {
+  primary: (theme: any) => css`
+    background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primaryHover});
     color: #fff;
-    border: 1px solid rgba(59,130,246,0.4);
-    box-shadow: 0 0 20px rgba(59,130,246,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 12px ${theme.colors.primary}33;
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #60A5FA, #3B82F6);
-      box-shadow: 0 0 30px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+      filter: brightness(1.1);
+      box-shadow: 0 6px 16px ${theme.colors.primary}44;
       transform: translateY(-1px);
     }
     &:active:not(:disabled) { transform: translateY(0); }
   `,
-  secondary: css`
-    background: rgba(30, 41, 59, 0.9);
-    color: #F1F5F9;
-    border: 1px solid rgba(255,255,255,0.1);
+  secondary: (theme: any) => css`
+    background: ${theme.colors.bgSecondary};
+    color: ${theme.colors.textPrimary};
+    border: 1px solid ${theme.colors.border};
     backdrop-filter: blur(8px);
     &:hover:not(:disabled) {
-      background: rgba(39, 53, 73, 0.95);
-      border-color: rgba(255,255,255,0.2);
+      background: ${theme.colors.bgHover};
+      border-color: ${theme.colors.borderHover};
       transform: translateY(-1px);
     }
   `,
-  ghost: css`
+  ghost: (theme: any) => css`
     background: transparent;
-    color: #94A3B8;
+    color: ${theme.colors.textSecondary};
     border: 1px solid transparent;
     &:hover:not(:disabled) {
-      background: rgba(255,255,255,0.06);
-      color: #F1F5F9;
-      border-color: rgba(255,255,255,0.08);
+      background: ${theme.colors.bgSecondary};
+      color: ${theme.colors.textPrimary};
+      border-color: ${theme.colors.border};
     }
   `,
-  danger: css`
-    background: rgba(239,68,68,0.15);
-    color: #EF4444;
-    border: 1px solid rgba(239,68,68,0.3);
+  danger: (theme: any) => css`
+    background: ${theme.colors.critical}15;
+    color: ${theme.colors.critical};
+    border: 1px solid ${theme.colors.critical}33;
     &:hover:not(:disabled) {
-      background: rgba(239,68,68,0.25);
-      box-shadow: 0 0 20px rgba(239,68,68,0.2);
+      background: ${theme.colors.critical}25;
+      box-shadow: 0 0 20px ${theme.colors.critical}22;
       transform: translateY(-1px);
     }
   `,
 };
 
 const sizeStyles: Record<Size, ReturnType<typeof css>> = {
+  xs: css`padding: 3px 8px; font-size: 11px; gap: 4px; border-radius: 6px;`,
   sm: css`padding: 6px 12px; font-size: 12px; gap: 6px;`,
   md: css`padding: 10px 18px; font-size: 14px; gap: 8px;`,
   lg: css`padding: 14px 24px; font-size: 15px; gap: 10px; min-height: 48px;`,
@@ -75,7 +76,7 @@ const StyledButton = styled(motion.button)<{ $variant: Variant; $size: Size }>`
   user-select: none;
   letter-spacing: 0.01em;
 
-  ${({ $variant }) => variantStyles[$variant]}
+  ${({ $variant, theme }) => variantStyles[$variant](theme)}
   ${({ $size }) => sizeStyles[$size]}
 
   &:disabled {
@@ -116,7 +117,7 @@ export function Button({
       $size={size}
       whileTap={{ scale: 0.97 }}
       disabled={loading || props.disabled}
-      {...(props as React.ComponentProps<typeof motion.button>)}
+      {...props}
     >
       {loading ? <Spinner /> : icon}
       {children}

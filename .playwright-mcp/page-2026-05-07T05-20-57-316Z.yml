@@ -1,0 +1,158 @@
+- generic [ref=e34]:
+  - banner [ref=e35]:
+    - link "🗺️ eMap" [ref=e36] [cursor=pointer]:
+      - /url: /map
+      - generic [ref=e37]: 🗺️
+      - generic [ref=e38]: eMap
+    - navigation [ref=e39]:
+      - link "🗺️ Карта" [ref=e40] [cursor=pointer]:
+        - /url: /map
+        - generic [ref=e41]: 🗺️
+        - generic [ref=e42]: Карта
+      - link "📊 Аналитика" [ref=e43] [cursor=pointer]:
+        - /url: /dashboard
+        - generic [ref=e44]: 📊
+        - generic [ref=e45]: Аналитика
+      - link "✅ Задачи" [ref=e46] [cursor=pointer]:
+        - /url: /tasks
+        - generic [ref=e47]: ✅
+        - generic [ref=e48]: Задачи
+      - link "🔑 Учетки" [ref=e49] [cursor=pointer]:
+        - /url: /district-accounts
+        - generic [ref=e50]: 🔑
+        - generic [ref=e51]: Учетки
+      - link "⚙️ Управление" [ref=e52] [cursor=pointer]:
+        - /url: /admin
+        - generic [ref=e53]: ⚙️
+        - generic [ref=e54]: Управление
+    - generic [ref=e55]:
+      - generic [ref=e56]: Суперадмин
+      - button "🔔" [ref=e57] [cursor=pointer]
+      - button "СА Системный Администратор ▾" [ref=e58] [cursor=pointer]:
+        - generic [ref=e59]: СА
+        - generic [ref=e60]: Системный Администратор
+        - generic [ref=e61]: ▾
+  - generic [ref=e64]:
+    - generic [ref=e68]:
+      - generic:
+        - generic [ref=e73]:
+          - generic [ref=e75]:
+            - text: © Яндекс
+            - link "Условия использования" [ref=e77] [cursor=pointer]:
+              - /url: https://yandex.ru/legal/maps_termsofuse/?lang=ru
+          - link [ref=e79] [cursor=pointer]:
+            - /url: ""
+        - generic [ref=e81]:
+          - generic "Открыть в Яндекс Картах" [ref=e82]:
+            - generic [ref=e86] [cursor=pointer]: Открыть в Яндекс Картах
+          - link "Создать свою карту" [ref=e87] [cursor=pointer]:
+            - /url: "https://tech.yandex.ru/maps/mapsapi/?from=api-maps "
+      - generic:
+        - generic [ref=e103]: "2"
+        - generic:
+          - generic:
+            - generic: Абайская
+        - generic:
+          - generic:
+            - generic: Акмолинская
+        - generic:
+          - generic:
+            - generic: Актюбинская
+        - generic:
+          - generic:
+            - generic: Алматинская
+        - generic:
+          - generic:
+            - generic: Атырауская
+        - generic:
+          - generic:
+            - generic:
+              - text: Восточно-
+              - text: Казахстанская
+        - generic:
+          - generic:
+            - generic: Жамбылская
+        - generic:
+          - generic:
+            - generic: Жетысуская
+        - generic:
+          - generic:
+            - generic:
+              - text: Западно-
+              - text: Казахстанская
+        - generic:
+          - generic:
+            - generic: Карагандинская
+        - generic:
+          - generic:
+            - generic: Костанайская
+        - generic:
+          - generic:
+            - generic: Кызылординская
+        - generic:
+          - generic:
+            - generic: Мангистауская
+        - generic:
+          - generic:
+            - generic: Павлодарская
+        - generic:
+          - generic:
+            - generic:
+              - text: Северо-
+              - text: Казахстанская
+        - generic:
+          - generic:
+            - generic: Туркестанская
+        - generic:
+          - generic:
+            - generic: Улытауская
+    - button "* Фильтры" [ref=e115] [cursor=pointer]:
+      - generic [ref=e116]: "*"
+      - text: Фильтры
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - generic [ref=e119]: Всего
+        - generic [ref=e120]: "1"
+        - text: "|"
+      - generic [ref=e121]:
+        - generic [ref=e123]: "1"
+        - text: "|"
+      - generic [ref=e124]:
+        - generic [ref=e126]: "0"
+        - text: "|"
+      - generic [ref=e129]: "0"
+    - generic [ref=e130]:
+      - generic [ref=e131]: Слои данных
+      - button "📍 Статусы" [ref=e132] [cursor=pointer]:
+        - generic [ref=e133]: 📍
+        - text: Статусы
+      - button "📝 Задачи" [ref=e134] [cursor=pointer]:
+        - generic [ref=e135]: 📝
+        - text: Задачи
+      - button "🗺️ Регионы" [ref=e136] [cursor=pointer]:
+        - generic [ref=e137]: 🗺️
+        - text: Регионы
+      - button "🏥 Оборудование" [ref=e138] [cursor=pointer]:
+        - generic [ref=e139]: 🏥
+        - text: Оборудование
+      - button "📏 Дальность" [ref=e140] [cursor=pointer]:
+        - generic [ref=e141]: 📏
+        - text: Дальность
+      - generic [ref=e143]: Фон карты
+      - button "🗺️ Стандарт" [ref=e144] [cursor=pointer]:
+        - generic [ref=e145]: 🗺️
+        - text: Стандарт
+      - button "📄 Схематичный" [ref=e146] [cursor=pointer]:
+        - generic [ref=e147]: 📄
+        - text: Схематичный
+    - generic [ref=e148]: "УРОВЕНЬ: Казахстан"
+    - button "+ Добавить объект" [ref=e149] [cursor=pointer]
+    - generic [ref=e150]:
+      - generic [ref=e165]:
+        - generic [ref=e166]:
+          - generic [ref=e167]: 🗺 Планировщик маршрута
+          - button "✕" [ref=e168] [cursor=pointer]
+        - generic [ref=e170]: Кликайте на населённые пункты или объекты на карте, чтобы добавить точки маршрута
+      - generic [ref=e151]:
+        - button "📏 Линейка" [ref=e152] [cursor=pointer]
+        - button "🗺 Маршрут" [active] [ref=e153] [cursor=pointer]

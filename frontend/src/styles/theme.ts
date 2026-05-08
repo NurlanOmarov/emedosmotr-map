@@ -1,4 +1,5 @@
-export const theme = {
+export const darkTheme = {
+  mode: 'dark' as const,
   colors: {
     // Brand
     primary: '#3B82F6',
@@ -63,4 +64,58 @@ export const theme = {
   },
 };
 
-export type Theme = typeof theme;
+export const lightTheme = {
+  mode: 'light' as const,
+  colors: {
+    // Brand
+    primary: '#2563EB',
+    primaryHover: '#1D4ED8',
+    primaryGlow: 'rgba(37,99,235,0.15)',
+
+    // Status
+    ready: '#16A34A',
+    readyBg: 'rgba(22,163,74,0.1)',
+    inProgress: '#D97706',
+    inProgressBg: 'rgba(217,119,6,0.1)',
+    critical: '#DC2626',
+    criticalBg: 'rgba(220,38,38,0.1)',
+
+    // Priority
+    priorityLow: '#64748B',
+    priorityNormal: '#2563EB',
+    priorityHigh: '#EA580C',
+    priorityCritical: '#B91C1C',
+
+    // Neutrals
+    bg: '#F8FAFC',
+    bgSecondary: '#F1F5F9',
+    bgCard: '#FFFFFF',
+    bgHover: '#E2E8F0',
+    border: 'rgba(0,0,0,0.08)',
+    borderHover: 'rgba(0,0,0,0.16)',
+
+    // Text
+    textPrimary: '#0F172A',
+    textSecondary: '#475569',
+    textMuted: '#94A3B8',
+
+    // Glass
+    glass: 'rgba(255, 255, 255, 0.8)',
+    glassBorder: 'rgba(0,0,0,0.06)',
+  },
+  shadows: {
+    sm: '0 1px 3px rgba(0,0,0,0.1)',
+    md: '0 4px 16px rgba(0,0,0,0.08)',
+    lg: '0 8px 32px rgba(0,0,0,0.12)',
+    glow: '0 0 24px rgba(37,99,235,0.2)',
+    glowGreen: '0 0 20px rgba(22,163,74,0.2)',
+    glowRed: '0 0 20px rgba(220,38,38,0.2)',
+  },
+  radii: darkTheme.radii,
+  transitions: darkTheme.transitions,
+  blur: darkTheme.blur,
+};
+
+export const theme = darkTheme; // Default export for backwards compatibility during migration
+
+export type Theme = typeof darkTheme;

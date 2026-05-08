@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { geoApi } from '@/services/api';
 import { Button } from '@/components/ui/Button';
-import { User, UserRole, Region } from '@/types';
+import { User, Region } from '@/types';
 import { motion } from 'framer-motion';
 
 const Overlay = styled(motion.div)`
@@ -21,7 +21,7 @@ const Overlay = styled(motion.div)`
 `;
 
 const FormContainer = styled(motion.div)`
-  background: ${({ theme }) => theme.colors.background.card};
+  background: ${({ theme }) => theme.colors.bgCard};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 16px;
   width: 100%;
@@ -61,7 +61,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary.main};
+    border-color: ${({ theme }) => theme.colors.primary};
     background: rgba(255, 255, 255, 0.08);
   }
 `;

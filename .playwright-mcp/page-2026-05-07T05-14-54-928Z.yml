@@ -1,0 +1,19 @@
+- generic [ref=e19]:
+  - generic [ref=e20]:
+    - generic [ref=e32]: 🗺️
+    - generic [ref=e21]:
+      - heading "eMedosmotr Map" [level=1] [ref=e22]
+      - paragraph [ref=e23]: Система мониторинга внедрения
+  - generic [ref=e24]:
+    - generic [ref=e33]: Неверный логин или пароль
+    - generic [ref=e25]:
+      - generic [ref=e26]: Логин
+      - textbox "Логин" [ref=e27]:
+        - /placeholder: Введите имя пользователя
+        - text: admin
+    - generic [ref=e28]:
+      - generic [ref=e29]: Пароль
+      - textbox "Пароль" [ref=e30]:
+        - /placeholder: ••••••••
+        - text: admin123
+    - button "Войти в систему" [ref=e31] [cursor=pointer]

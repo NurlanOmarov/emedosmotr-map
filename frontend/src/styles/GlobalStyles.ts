@@ -15,6 +15,17 @@ export const GlobalStyles = createGlobalStyle`
     --priority-normal: #3B82F6;
     --priority-high: #F97316;
     --priority-critical: #DC2626;
+    
+    --text-primary: ${({ theme }) => theme.colors.textPrimary};
+    --text-secondary: ${({ theme }) => theme.colors.textSecondary};
+    --text-muted: ${({ theme }) => theme.colors.textMuted};
+    --primary: ${({ theme }) => theme.colors.primary};
+    --primary-glow: ${({ theme }) => theme.colors.primaryGlow};
+    --ready: ${({ theme }) => theme.colors.ready};
+    --critical: ${({ theme }) => theme.colors.critical};
+    --border: ${({ theme }) => theme.colors.border};
+    --bg-secondary: ${({ theme }) => theme.colors.bgSecondary};
+    --bg-card: ${({ theme }) => theme.colors.bgCard};
   }
 
   html {
@@ -24,12 +35,13 @@ export const GlobalStyles = createGlobalStyle`
 
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0F172A;
-    color: #F1F5F9;
+    background: ${({ theme }) => theme.colors.bg};
+    color: ${({ theme }) => theme.colors.textPrimary};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
     height: 100dvh;
+    transition: background 0.3s ease, color 0.3s ease;
   }
 
   #root {
@@ -56,25 +68,31 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.15);
+    background: ${({ theme }) => theme.colors.border};
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.25);
+    background: ${({ theme }) => theme.colors.textSecondary};
   }
 
   /* Glassmorphism utility */
   .glass {
-    background: rgba(30, 41, 59, 0.8);
+    background: ${({ theme }) => theme.colors.glass};
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid ${({ theme }) => theme.colors.glassBorder};
+  }
+
+  .hide-mobile {
+    @media (max-width: 640px) {
+      display: none !important;
+    }
   }
 `;

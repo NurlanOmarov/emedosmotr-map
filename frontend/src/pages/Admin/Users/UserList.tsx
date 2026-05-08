@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { usersApi, geoApi } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { User, Region } from '@/types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { UserForm } from './UserForm';
 
 const Container = styled.div`

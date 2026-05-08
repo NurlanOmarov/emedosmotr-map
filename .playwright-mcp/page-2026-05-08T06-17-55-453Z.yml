@@ -1,0 +1,71 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "Map eMap" [ref=e5] [cursor=pointer]:
+      - /url: /map
+      - img "Map" [ref=e7]
+      - generic [ref=e8]: eMap
+    - navigation [ref=e9]:
+      - link "Карта Карта" [ref=e10] [cursor=pointer]:
+        - /url: /map
+        - img "Карта" [ref=e12]
+        - generic [ref=e13]: Карта
+      - link "Аналитика Аналитика" [ref=e14] [cursor=pointer]:
+        - /url: /dashboard
+        - img "Аналитика" [ref=e16]
+        - generic [ref=e17]: Аналитика
+      - link "Задачи Задачи" [ref=e18] [cursor=pointer]:
+        - /url: /tasks
+        - img "Задачи" [ref=e20]
+        - generic [ref=e21]: Задачи
+      - link "🔑 Учетки" [ref=e22] [cursor=pointer]:
+        - /url: /district-accounts
+        - generic [ref=e23]: 🔑
+        - generic [ref=e24]: Учетки
+      - link "⚙️ Управление" [ref=e25] [cursor=pointer]:
+        - /url: /admin
+        - generic [ref=e26]: ⚙️
+        - generic [ref=e27]: Управление
+    - generic [ref=e28]:
+      - generic [ref=e29]: Суперадмин
+      - button "☀️" [ref=e30] [cursor=pointer]:
+        - generic [ref=e31]: ☀️
+      - button "🔍 Поиск Ctrl+K" [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: 🔍
+        - generic [ref=e34]: Поиск
+        - generic [ref=e35]: Ctrl+K
+      - button "🔔" [ref=e36] [cursor=pointer]:
+        - generic [ref=e37]: 🔔
+      - button "СА Системный Администратор ▾" [ref=e38] [cursor=pointer]:
+        - generic [ref=e39]: СА
+        - generic [ref=e40]: Системный Администратор
+        - generic [ref=e41]: ▾
+  - generic [ref=e43]:
+    - generic [ref=e44]:
+      - heading "Учётные записи медкомиссий" [level=1] [ref=e45]
+      - generic [ref=e47]:
+        - img [ref=e48]
+        - textbox "Поиск по ФИО, логину..." [ref=e51]
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]: Область
+        - combobox [ref=e55]:
+          - option "Выберите область..." [selected]
+      - generic [ref=e56]:
+        - generic [ref=e57]: Район
+        - combobox [disabled] [ref=e58]:
+          - option "Сначала выберите область" [selected]
+      - paragraph [ref=e60]: Выберите область и район для просмотра учётных записей медкомиссий.
+    - table [ref=e62]:
+      - rowgroup [ref=e63]:
+        - row "ФИО / Роль Категория Логин Пароль Телефон Примечание" [ref=e64]:
+          - columnheader [ref=e65]
+          - columnheader "ФИО / Роль" [ref=e66]
+          - columnheader "Категория" [ref=e67]
+          - columnheader "Логин" [ref=e68]
+          - columnheader "Пароль" [ref=e69]
+          - columnheader "Телефон" [ref=e70]
+          - columnheader "Примечание" [ref=e71]
+          - columnheader [ref=e72]
+      - rowgroup [ref=e73]:
+        - row "Выберите область и район" [ref=e74]:
+          - cell "Выберите область и район" [ref=e75]

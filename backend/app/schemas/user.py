@@ -36,6 +36,9 @@ class UserResponse(BaseModel):
     is_active: bool
     phone: str | None
     avatar_url: str | None
+    telegram_chat_id: str | None
+    telegram_username: str | None
+    notification_settings: dict
     created_at: datetime
 
     model_config = {"from_attributes": True}
