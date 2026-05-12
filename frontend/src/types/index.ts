@@ -1,4 +1,5 @@
 export type UserRole =
+  | 'admin'
   | 'superadmin'
   | 'director'
   | 'regional_manager'

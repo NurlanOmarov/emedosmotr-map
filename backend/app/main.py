@@ -1,5 +1,4 @@
 import structlog
-import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,6 +17,8 @@ from app.modules.notifications.telegram_router import router as telegram_router
 from app.modules.routing.router import router as routing_router
 from app.modules.district_accounts.router import router as district_accounts_router
 from app.modules.ws.router import router as ws_router
+from app.modules.taskops.router import router as taskops_router
+from app.modules.settings.router import router as settings_router
 
 structlog.configure(
     processors=[
@@ -56,6 +57,8 @@ app.include_router(telegram_router, prefix=API_PREFIX)
 app.include_router(routing_router, prefix=API_PREFIX)
 app.include_router(analytics_router, prefix=API_PREFIX)
 app.include_router(district_accounts_router, prefix=API_PREFIX)
+app.include_router(taskops_router, prefix=API_PREFIX)
+app.include_router(settings_router, prefix=API_PREFIX)
 app.include_router(ws_router)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

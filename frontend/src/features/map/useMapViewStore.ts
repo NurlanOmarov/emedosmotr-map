@@ -36,8 +36,15 @@ interface MapViewState {
   selectSettlementLevel: (settlementId: number, settlementName: string) => void;
   backToCountry: () => void;
   backToRegion: () => void;
-  openAddModal: () => void;
   closeAddModal: () => void;
+  lastUpdateTrigger: number;
+  triggerUpdate: () => void;
+  
+  // Pick location on map
+  isPickingLocation: boolean;
+  setPickingLocation: (val: boolean) => void;
+  pickedCoords: [number, number] | null;
+  setPickedCoords: (coords: [number, number] | null) => void;
 }
 
 const defaultFilters: MapFilters = {
@@ -66,6 +73,9 @@ export const useMapViewStore = create<MapViewState>((set, get) => ({
   selectedRegionName: '',
   selectedSettlementName: '',
   showAddModal: false,
+  lastUpdateTrigger: Date.now(),
+  isPickingLocation: false,
+  pickedCoords: null,
 
   // Existing actions
   selectLocation: (id, breadcrumb) =>
@@ -130,5 +140,9 @@ export const useMapViewStore = create<MapViewState>((set, get) => ({
     }),
 
   openAddModal: () => set({ showAddModal: true }),
-  closeAddModal: () => set({ showAddModal: false }),
+  closeAddModal: () => set({ showAddModal: false, isPickingLocation: false, pickedCoords: null }),
+  triggerUpdate: () => set({ lastUpdateTrigger: Date.now() }),
+
+  setPickingLocation: (val) => set({ isPickingLocation: val }),
+  setPickedCoords: (coords) => set({ pickedCoords: coords }),
 }));

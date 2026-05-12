@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     gdal-bin \
     libgdal-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .

@@ -12,6 +12,10 @@ from app.models.status_history import StatusHistory
 from app.models.research import MedicalResearch
 from app.models.route import RouteCache
 from app.models.task import Task, TaskAttachment, TaskComment
+from app.models.taskops import (
+    TaskopsProject, TaskopsProjectMember, TaskopsCycle, TaskopsLabel,
+    TaskopsTask, TaskopsComment, TaskopsDependency, TaskopsGoal, TaskopsAuditLog,
+)
 from app.models.user import User
 
 __all__ = [
@@ -35,4 +39,13 @@ __all__ = [
     "AuditLog",
     "ETLSyncLog",
     "DistrictAccount",
+    "TaskopsProject",
+    "TaskopsProjectMember",
+    "TaskopsCycle",
+    "TaskopsLabel",
+    "TaskopsTask",
+    "TaskopsComment",
+    "TaskopsDependency",
+    "TaskopsGoal",
+    "TaskopsAuditLog",
 ]

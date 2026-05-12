@@ -59,28 +59,15 @@ const YMapEl = styled.div<{ $whiteBg: boolean }>`
     }
   `}
   
-  /* Apply dark filter to map if in dark mode */
-  ${({ theme }) => theme.mode === 'dark' && `
-    /* Target Yandex Map container with a more general selector to handle version changes */
-    div[class*="ymaps-"][class*="-map"] {
-      filter: invert(1) hue-rotate(180deg) brightness(0.3) contrast(1.3) !important;
-      background: transparent !important;
-    }
-    
-    /* Force transparency on all internal panes */
-    [class*="ymaps-"][class*="-pane"] {
-      background: transparent !important;
-    }
-
-    /* Re-invert markers, balloons and other UI elements to keep original colors */
-    [class*="ymaps-"][class*="-placemark"], 
-    [class*="ymaps-"][class*="-balloon"],
-    [class*="ymaps-"][class*="-route-panel"],
-    [class*="ymaps-"][class*="-copyright"],
-    [class*="ymaps-"][class*="-controls__control"] {
-      filter: invert(1) hue-rotate(180deg) brightness(2.5) contrast(0.8) !important;
-    }
-  `}
+  /* Remove CSS filter hack and use official JSON customization instead */
+  div[class*="ymaps-"][class*="-map"] {
+    background: transparent !important;
+  }
+  
+  /* Force transparency on all internal panes */
+  [class*="ymaps-"][class*="-pane"] {
+    background: transparent !important;
+  }
 
   canvas {
     transition: opacity 0.4s ease;
@@ -336,10 +323,22 @@ const LEVEL_LABELS: Record<string, string> = {
   settlement: 'Нас. пункт',
 };
 
-const WRITER_ROLES = ['superadmin', 'regional_manager', 'engineer'];
+const WRITER_ROLES = ['admin', 'superadmin', 'regional_manager', 'engineer'];
 
 const KZ_CENTER: [number, number] = [48.0196, 66.9237];
 const KZ_ZOOM = 5;
+
+// Official Yandex Maps 2.1 "Night" Style JSON
+const YANDEX_DARK_STYLE = [
+  { "tags": { "all": ["water"] }, "stylers": [{ "color": "#0a1122" }] },
+  { "tags": { "all": ["landscape"] }, "stylers": [{ "color": "#121212" }] },
+  { "tags": { "all": ["road"] }, "stylers": [{ "color": "#1c1c1c" }] },
+  { "tags": { "all": ["admin"] }, "stylers": [{ "color": "#333333" }] },
+  { "tags": { "all": ["transit"] }, "stylers": [{ "visibility": "simplified" }, { "color": "#2c2e30" }] },
+  { "tags": { "all": ["poi"] }, "stylers": [{ "visibility": "off" }] },
+  { "elements": ["label.text.fill"], "stylers": [{ "color": "#8d9ba4" }] },
+  { "elements": ["label.text.stroke"], "stylers": [{ "visibility": "off" }] }
+];
 
 function getBoundsFromGeomJson(geomJson: any): [[number, number], [number, number]] | null {
   let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
@@ -379,9 +378,9 @@ function makeSvgUri(svg: string): string {
 function makeMilitarySvg(color: string): string {
   return makeSvgUri(
     `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="16" fill="${color}" opacity="0.15"/>
-      <polygon points="18,4 21.5,13.5 32,13.5 23.5,19.5 26.5,29 18,23.5 9.5,29 12.5,19.5 4,13.5 14.5,13.5"
-        fill="${color}" stroke="white" stroke-width="1.2" stroke-linejoin="round"/>
+      <circle cx="18" cy="18" r="16" fill="white" stroke="${color}" stroke-width="2"/>
+      <polygon points="18,7 20.8,15 29.2,15 22.4,20 25,28 18,23 11,28 13.6,20 6.8,15 15.2,15"
+        fill="${color}"/>
     </svg>`
   );
 }
@@ -389,10 +388,9 @@ function makeMilitarySvg(color: string): string {
 function makeMedicalSvg(color: string): string {
   return makeSvgUri(
     `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="16" fill="${color}" opacity="0.15"/>
-      <circle cx="18" cy="18" r="14" fill="${color}" opacity="0.9"/>
-      <rect x="15" y="9" width="6" height="18" rx="2" fill="white"/>
-      <rect x="9" y="15" width="18" height="6" rx="2" fill="white"/>
+      <circle cx="18" cy="18" r="16" fill="white" stroke="${color}" stroke-width="2"/>
+      <rect x="15" y="9" width="6" height="18" rx="1" fill="${color}"/>
+      <rect x="9" y="15" width="18" height="6" rx="1" fill="${color}"/>
     </svg>`
   );
 }
@@ -400,14 +398,14 @@ function makeMedicalSvg(color: string): string {
 function makeServerSvg(color: string): string {
   return makeSvgUri(
     `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="16" fill="${color}" opacity="0.15"/>
-      <rect x="10" y="10" width="16" height="5" rx="1.5" fill="${color}" stroke="white" stroke-width="0.8"/>
-      <circle cx="22" cy="12.5" r="1.2" fill="white"/>
-      <rect x="10" y="17" width="16" height="5" rx="1.5" fill="${color}" stroke="white" stroke-width="0.8"/>
-      <circle cx="22" cy="19.5" r="1.2" fill="white"/>
-      <line x1="14" y1="22" x2="14" y2="27" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-      <line x1="22" y1="22" x2="22" y2="27" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-      <line x1="11" y1="27" x2="25" y2="27" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="18" cy="18" r="16" fill="white" stroke="${color}" stroke-width="2"/>
+      <rect x="10" y="10" width="16" height="5" rx="1.5" fill="${color}"/>
+      <rect x="10" y="17" width="16" height="5" rx="1.5" fill="${color}"/>
+      <circle cx="22" cy="12.5" r="1" fill="white"/>
+      <circle cx="22" cy="19.5" r="1" fill="white"/>
+      <line x1="14" y1="22" x2="14" y2="26" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="22" y1="22" x2="22" y2="26" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="11" y1="26" x2="25" y2="26" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
     </svg>`
   );
 }
@@ -469,11 +467,20 @@ export function MapPage() {
     setMapBackground,
     distanceCenter,
     setDistanceCenter,
+    lastUpdateTrigger,
+    isPickingLocation,
   } = useMapViewStore();
   const { user } = useAuthStore();
   const { themeMode } = useThemeStore();
   useMapWebSocket();
   const mapRef = useRef<any>(null);
+
+  // ── Refs for Custom Search Provider ───────────────────────────────────────
+  const mapLevelRef = useRef<string>(mapLevel);
+  useEffect(() => { mapLevelRef.current = mapLevel; }, [mapLevel]);
+
+  const selectedRegionIdRef = useRef<number | null>(selectedRegionId);
+  useEffect(() => { selectedRegionIdRef.current = selectedRegionId; }, [selectedRegionId]);
 
   const handleBackToCountry = () => {
     backToCountry();
@@ -518,28 +525,38 @@ export function MapPage() {
 
   const [activeTool, setActiveTool] = useState<ActiveTool>('none');
   const activeToolRef = useRef<ActiveTool>('none');
+  const isPickingLocationRef = useRef(false);
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
+  useEffect(() => { isPickingLocationRef.current = isPickingLocation; }, [isPickingLocation]);
 
-  const getPlacemarkOptions = useCallback((type: string, color: string) => {
-    const customIcon = (href: string) => ({
-      iconLayout: 'default#image',
-      iconImageHref: href,
-      iconImageSize: [36, 36],
-      iconImageOffset: [-18, -18],
-    });
-
+  const getPlacemarkOptions = useCallback((type: string, color: string, customSize?: number) => {
     const isTool = activeToolRef.current !== 'none';
-    const options: any = {
-      iconColor: color,
-      cursor: isTool ? 'crosshair' : 'pointer'
+    const size = customSize || 36;
+    const translate = size / 2;
+    const iconSize = size; // Scale SVG to fill the container
+    
+    let iconHtml = '';
+    if (type === 'military_office') iconHtml = `<img src="${makeMilitarySvg(color)}" style="width:${iconSize}px; height:${iconSize}px;"/>`;
+    else if (MEDICAL_TYPES.has(type)) iconHtml = `<img src="${makeMedicalSvg(color)}" style="width:${iconSize}px; height:${iconSize}px;"/>`;
+    else if (type === 'relay_server_location') iconHtml = `<img src="${makeServerSvg(color)}" style="width:${iconSize}px; height:${iconSize}px;"/>`;
+    else iconHtml = `<div style="width:${size-12}px; height:${size-12}px; background:${color}; border-radius:50%; border:2px solid white;"></div>`;
+
+    return {
+      iconLayout: window.ymaps.templateLayoutFactory.createClass(
+        `<div class="ymaps-re-invert" style="position: relative; width: ${size}px; height: ${size}px; transform: translate(-${translate}px, -${translate}px); cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center;">
+          ${iconHtml}
+        </div>`
+      ),
+      iconShape: {
+        type: 'Circle',
+        coordinates: [0, 0],
+        radius: translate
+      },
+      cursor: isTool ? 'crosshair' : 'pointer',
+      hideIconOnBalloonOpen: false,
+      zIndex: 100,
+      interactive: true,
     };
-
-    if (type === 'military_office') Object.assign(options, customIcon(makeMilitarySvg(color)));
-    else if (MEDICAL_TYPES.has(type)) Object.assign(options, customIcon(makeMedicalSvg(color)));
-    else if (type === 'relay_server_location') Object.assign(options, customIcon(makeServerSvg(color)));
-    else options.preset = 'islands#dotIcon';
-
-    return options;
   }, []);
 
   // Ruler
@@ -564,7 +581,7 @@ export function MapPage() {
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     const isTool = activeTool !== 'none';
-    const cursor = isTool ? 'crosshair' : '';
+    const cursor = (isTool || isPickingLocation) ? 'crosshair' : '';
     
     // Update map container
     const el = mapRef.current.container.getElement() as HTMLElement;
@@ -574,15 +591,16 @@ export function MapPage() {
     const collections = [regionsCollectionRef, featuresCollectionRef, settlementCollectionRef];
     collections.forEach(ref => {
       if (ref.current) {
-        ref.current.options.set('cursor', isTool ? 'crosshair' : 'pointer');
+        const c = (isTool || isPickingLocation) ? 'crosshair' : 'pointer';
+        ref.current.options.set('cursor', c);
         
         // Also force update children to be sure
         ref.current.each((obj: any) => {
-          obj.options.set('cursor', isTool ? 'crosshair' : 'pointer');
+          obj.options.set('cursor', c);
         });
       }
     });
-  }, [activeTool, mapReady]);
+  }, [activeTool, mapReady, isPickingLocation]);
 
   // ── HTML decode helper (for Yandex API responses) ─────────────────────────
 
@@ -748,6 +766,15 @@ export function MapPage() {
   const mapClickCallbackRef = useRef<(coords: [number, number], name?: string) => void>(() => {});
 
   mapClickCallbackRef.current = (coords: [number, number], name?: string) => {
+    if (isPickingLocationRef.current) {
+      const store = useMapViewStore.getState();
+      store.setPickedCoords(coords);
+      setTimeout(() => {
+        store.setPickingLocation(false);
+      }, 150);
+      return;
+    }
+
     const tool = activeToolRef.current;
     
     if (tool === 'none') {
@@ -826,6 +853,12 @@ export function MapPage() {
 
   // ── Map initialization ────────────────────────────────────────────────────
 
+  const featuresRef = useRef<any[]>(features);
+  useEffect(() => { featuresRef.current = features; }, [features]);
+
+  const regionsDataRef = useRef<any>(regionsData);
+  useEffect(() => { regionsDataRef.current = regionsData; }, [regionsData]);
+
   useEffect(() => {
     const init = () => {
       if (!window.ymaps || mapRef.current) return;
@@ -837,6 +870,93 @@ export function MapPage() {
           center: [48.0196, 66.9237],
           zoom: 5,
           controls: ['zoomControl', 'fullscreenControl'],
+        }, {
+          // Set initial customization if theme is dark
+          customization: themeMode === 'dark' ? YANDEX_DARK_STYLE : []
+        });
+
+        // Add SearchControl with Custom Provider
+        const CustomSearchProvider = {
+          geocode: function (request: string) {
+            const deferred = new window.ymaps.vow.defer();
+            const geoObjects = new window.ymaps.GeoObjectCollection();
+            
+            const lowerReq = request.toLowerCase();
+            const feats = featuresRef.current || [];
+            
+            const localMatches = feats.filter((f: any) => 
+                f.properties.name?.toLowerCase().includes(lowerReq) ||
+                f.properties.address?.toLowerCase().includes(lowerReq)
+            ).slice(0, 5);
+            
+            localMatches.forEach((f: any) => {
+              const lon = f.geometry.coordinates[0];
+              const lat = f.geometry.coordinates[1];
+              const placemark = new window.ymaps.Placemark(
+                [lat, lon],
+                {
+                  name: f.properties.name,
+                  description: (f.properties.address || 'Наш объект') + ' (База)'
+                },
+                {
+                  preset: 'islands#blueDotIcon'
+                }
+              );
+              geoObjects.add(placemark);
+            });
+
+            let bounds = [[40.56, 46.49], [55.44, 87.31]]; // KZ bounds
+            if (mapLevelRef.current === 'region' || mapLevelRef.current === 'settlement') {
+                const r = regionsDataRef.current?.find((x: any) => x.region_id === selectedRegionIdRef.current);
+                if (r && r.geometry_json) {
+                    const rb = getBoundsFromGeomJson(r.geometry_json);
+                    if (rb) bounds = rb;
+                }
+            }
+
+            window.ymaps.geocode(request, { boundedBy: bounds, strictBounds: true, results: 10 })
+              .then(function (res: any) {
+                res.geoObjects.each(function (obj: any) {
+                  geoObjects.add(obj);
+                });
+                
+                deferred.resolve({
+                  geoObjects: geoObjects,
+                  metaData: {
+                    geocoder: {
+                      request: request,
+                      found: geoObjects.getLength(),
+                      results: geoObjects.getLength(),
+                      skip: 0
+                    }
+                  }
+                });
+              })
+              .catch(function () {
+                 // In case yandex fails, still resolve with local matches
+                 deferred.resolve({
+                    geoObjects: geoObjects,
+                    metaData: {
+                      geocoder: { request: request, found: geoObjects.getLength(), results: geoObjects.getLength(), skip: 0 }
+                    }
+                 });
+              });
+
+            return deferred.promise();
+          }
+        };
+
+        const searchControl = new window.ymaps.control.SearchControl({
+          options: {
+            provider: CustomSearchProvider,
+            noPlacemark: false, 
+            placeholderContent: 'Поиск (адрес или объект)',
+            size: 'large'
+          }
+        });
+        mapRef.current.controls.add(searchControl, { 
+          float: 'none', 
+          position: { top: 16, left: 130 } 
         });
 
         mapRef.current.container.getElement().style.borderRadius = '0';
@@ -890,13 +1010,18 @@ export function MapPage() {
     
     if (mapBackground === 'white') {
       map.setType(null);
-      // Optional: hide labels if possible or keep them
       map.options.set('yandexMapAutoSkip', true);
     } else {
       map.setType('yandex#map');
       map.options.set('yandexMapAutoSkip', false);
     }
   }, [mapBackground, mapReady]);
+
+  // Update map style when theme changes
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    mapRef.current.options.set('customization', themeMode === 'dark' ? YANDEX_DARK_STYLE : []);
+  }, [themeMode, mapReady]);
 
   // ── Settlement cluster markers (country / region level) ───────────────────
 
@@ -942,14 +1067,39 @@ export function MapPage() {
           iconContent: String(count),
         },
         {
-          preset: 'islands#circleIcon',
-          iconColor: color,
+          iconLayout: window.ymaps.templateLayoutFactory.createClass(
+            `<div class="ymaps-re-invert" style="
+              position: relative;
+              width: 40px;
+              height: 40px;
+              background: ${color};
+              border: 2px solid white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-weight: 800;
+              font-size: 14px;
+              box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+              transform: translate(-20px, -20px);
+              cursor: pointer;
+              pointer-events: auto;
+            ">$[properties.iconContent]</div>`
+          ),
+          iconShape: {
+            type: 'Circle',
+            coordinates: [0, 0],
+            radius: 20
+          },
           cursor: activeToolRef.current !== 'none' ? 'crosshair' : 'pointer',
+          zIndex: 100,
+          interactive: true,
         }
       );
 
       placemark.events.add('click', (e: any) => {
-        if (activeToolRef.current !== 'none') {
+        if (activeToolRef.current !== 'none' || isPickingLocationRef.current) {
           // In tool mode: add as waypoint/ruler point; stop event from bubbling
           e.stopPropagation();
           mapClickCallbackRef.current([group.lat, group.lon], group.name);
@@ -991,7 +1141,7 @@ export function MapPage() {
       );
       collection.add(settlementLabel);
     });
-  }, [features, mapReady, settlementsData, mapLevel, selectedRegionId, selectSettlementLevel]);
+  }, [features, mapReady, settlementsData, mapLevel, selectedRegionId, selectSettlementLevel, lastUpdateTrigger]);
 
   // ── Individual location markers (settlement level) ────────────────────────
 
@@ -1007,10 +1157,25 @@ export function MapPage() {
       (f: any) => f.properties.settlement_id === selectedSettlementId
     );
 
+    const statusesLayerActive = activeLayers.includes('statuses');
+
     settlementFeatures.forEach((feat: any) => {
       const [lon, lat] = feat.geometry.coordinates;
       const typeConfig = LOCATION_TYPE_CONFIG[feat.properties.type];
-      const color = typeConfig ? typeConfig.color : '#6B7280';
+      
+      const statusColor = STATUS_COLORS[feat.properties.status as StatusType];
+      const typeColor = typeConfig ? typeConfig.color : '#6B7280';
+      const color = statusesLayerActive && statusColor ? statusColor : typeColor;
+
+      const isCRB = 
+        feat.properties.type === 'district_hospital' || 
+        feat.properties.name?.includes('ЦРБ') || 
+        feat.properties.name?.toLowerCase().includes('центральная районная больница');
+        
+      let finalSize = 36;
+      if (MEDICAL_TYPES.has(feat.properties.type) && !isCRB) {
+        finalSize = 26;
+      }
 
       const placemark = new window.ymaps.Placemark(
         [lat, lon],
@@ -1044,11 +1209,11 @@ export function MapPage() {
             </div>
           `,
         },
-        getPlacemarkOptions(feat.properties.type, color)
+        getPlacemarkOptions(feat.properties.type, color, finalSize)
       );
 
       placemark.events.add('click', (e: any) => {
-        if (activeToolRef.current !== 'none') {
+        if (activeToolRef.current !== 'none' || isPickingLocationRef.current) {
           e.stopPropagation();
           mapClickCallbackRef.current([lat, lon], feat.properties.name);
           return;
@@ -1093,7 +1258,7 @@ export function MapPage() {
       );
       collection.add(label);
     });
-  }, [features, mapReady, mapLevel, selectedSettlementId, selectedRegionName, selectedSettlementName, selectLocation]);
+  }, [features, mapReady, mapLevel, selectedSettlementId, selectedRegionName, selectedSettlementName, selectLocation, activeLayers, lastUpdateTrigger]);
 
   // ── Region polygons ───────────────────────────────────────────────────────
 
@@ -1261,7 +1426,7 @@ export function MapPage() {
             polygon.options.set({ fillOpacity: 0.08, strokeWidth: 2.0 });
           });
           polygon.events.add('click', (e: any) => {
-            if (activeToolRef.current !== 'none') {
+            if (activeToolRef.current !== 'none' || isPickingLocationRef.current) {
               e.stopPropagation();
               mapClickCallbackRef.current(e.get('coords'));
               return;

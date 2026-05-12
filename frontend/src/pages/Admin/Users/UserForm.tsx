@@ -178,6 +178,7 @@ export function UserForm({ user, onClose, onSubmit, isSubmitting }: Props) {
           <FormGroup>
             <Label>Роль</Label>
             <Select {...register('role')}>
+              <option value="admin">Администратор</option>
               <option value="superadmin">Суперадмин</option>
               <option value="director">Директор</option>
               <option value="regional_manager">Региональный менеджер</option>

@@ -12,6 +12,8 @@ import { MapPage } from '@/pages/Map';
 import { DashboardPage } from '@/pages/Dashboard';
 import { TasksPage } from '@/pages/Tasks';
 import { DistrictAccountsPage } from '@/pages/DistrictAccounts';
+import { TaskOpsPage } from '@/pages/TaskOps';
+import { SettingsPage } from '@/pages/Settings';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { UserList } from '@/pages/Admin/Users/UserList';
@@ -81,7 +83,7 @@ function AnimatedRoutes() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute roles={['superadmin', 'director', 'regional_manager', 'analyst']}>
+            <ProtectedRoute roles={['admin', 'superadmin', 'director', 'regional_manager', 'analyst']}>
               <AppShell>
                 <Header />
                 <PageWrapper
@@ -117,7 +119,7 @@ function AnimatedRoutes() {
         <Route
           path="/admin/users"
           element={
-            <ProtectedRoute roles={['superadmin']}>
+            <ProtectedRoute roles={['admin', 'superadmin']}>
               <AppShell>
                 <Header />
                 <PageWrapper
@@ -135,7 +137,7 @@ function AnimatedRoutes() {
         <Route
           path="/district-accounts"
           element={
-            <ProtectedRoute roles={['superadmin', 'director', 'regional_manager']}>
+            <ProtectedRoute roles={['admin', 'superadmin', 'director', 'regional_manager']}>
               <AppShell>
                 <Header />
                 <PageWrapper
@@ -145,6 +147,42 @@ function AnimatedRoutes() {
                   transition={{ duration: 0.2 }}
                 >
                   <DistrictAccountsPage />
+                </PageWrapper>
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/taskops"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Header />
+                <PageWrapper
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TaskOpsPage />
+                </PageWrapper>
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute roles={['admin', 'superadmin']}>
+              <AppShell>
+                <Header />
+                <PageWrapper
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <SettingsPage />
                 </PageWrapper>
               </AppShell>
             </ProtectedRoute>
@@ -180,6 +218,7 @@ export function App() {
     if (isAuthenticated) {
       wsService.connect('/ws/map');
       wsService.connect('/ws/tasks');
+      wsService.connect('/ws/taskops');
 
       // Request push notification permission on first entry if supported
       if ('Notification' in window && Notification.permission === 'default') {

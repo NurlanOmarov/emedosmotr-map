@@ -29,6 +29,7 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         localStorage.removeItem('access_token');
+        localStorage.removeItem('auth-storage');
         window.location.href = '/login';
       }
     }

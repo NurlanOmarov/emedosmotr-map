@@ -748,6 +748,9 @@ function CommissionTab({ locationId, canEdit }: { locationId: string; canEdit: b
           onSave={(formData) => {
             locationsApi.updateCommission(locationId, formData).then(() => {
               qc.invalidateQueries({ queryKey: ['commission', locationId] });
+              qc.invalidateQueries({ queryKey: ['location', locationId] });
+              qc.invalidateQueries({ queryKey: ['map-features'] });
+              triggerUpdate();
               setEditing(false);
             });
           }}
@@ -943,6 +946,25 @@ function DiagnosticsTab({ locationId, canEdit }: { locationId: string; canEdit: 
           onSave={(data) => {
             researchesApi.update(editingResearch.id, data).then(() => {
               qc.invalidateQueries({ queryKey: ['researches', selectedOrgId] });
+              qc.invalidateQueries({ queryKey: ['location', locationId] });
+              
+              qc.setQueriesData({ queryKey: ['map-features'] }, (old: any) => {
+                if (!old?.data?.features) return old;
+                return {
+                  ...old,
+                  data: {
+                    ...old.data,
+                    features: old.data.features.map((f: any) =>
+                      String(f.properties.id) === String(locationId)
+                        ? { ...f, properties: { ...f.properties, status: data.status || f.properties.status } }
+                        : f
+                    ),
+                  },
+                };
+              });
+              
+              qc.invalidateQueries({ queryKey: ['map-features'] });
+              triggerUpdate();
               setEditingResearch(null);
             });
           }}
@@ -1463,7 +1485,7 @@ interface Props {
 }
 
 export function LocationDetail({ locationId }: Props) {
-  const { backToMap, breadcrumb } = useMapViewStore();
+  const { backToMap, breadcrumb, triggerUpdate } = useMapViewStore();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -1475,13 +1497,31 @@ export function LocationDetail({ locationId }: Props) {
 
   const updateStatus = useMutation({
     mutationFn: (status: StatusType) => locationsApi.updateStatus(locationId, status),
+    onMutate: (newStatus) => {
+      // old is the raw axios response: { data: { features: [...] }, status, ... }
+      qc.setQueriesData({ queryKey: ['map-features'] }, (old: any) => {
+        if (!old?.data?.features) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            features: old.data.features.map((f: any) =>
+              String(f.properties.id) === String(locationId)
+                ? { ...f, properties: { ...f.properties, status: newStatus } }
+                : f
+            ),
+          },
+        };
+      });
+      triggerUpdate();
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['location', locationId] });
       qc.invalidateQueries({ queryKey: ['map-features'] });
     },
   });
 
-  const canEdit = !!user?.role && ['superadmin', 'regional_manager', 'engineer'].includes(user.role);
+  const canEdit = !!user?.role && ['admin', 'superadmin', 'regional_manager', 'engineer'].includes(user.role);
 
   if (isLoading) {
     return (

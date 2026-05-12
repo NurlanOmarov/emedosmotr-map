@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { geoApi } from '@/services/api';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { TasksList } from '@/components/shared/TasksList';
 
@@ -29,7 +29,7 @@ const FormInput = styled.input`
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
 `;
 
-const ModalOverlay = styled.div`
+const ModalOverlay = styled(motion.div)`
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.6);
@@ -259,6 +259,13 @@ function SettlementModal({
   onClose: () => void, 
   onSave: (data: any) => void 
 }) {
+  const {
+    isPickingLocation,
+    setPickingLocation,
+    pickedCoords,
+    setPickedCoords
+  } = useMapViewStore();
+
   const [form, setForm] = useState(settlement || {
     name: '',
     latitude: 43.2389,
@@ -266,8 +273,28 @@ function SettlementModal({
     region_id: regionId
   });
 
+  useEffect(() => {
+    if (pickedCoords) {
+      setForm((prev: any) => ({
+        ...prev,
+        latitude: Number(pickedCoords[0].toFixed(6)),
+        longitude: Number(pickedCoords[1].toFixed(6))
+      }));
+      setPickedCoords(null);
+    }
+  }, [pickedCoords, setPickedCoords]);
+
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: isPickingLocation ? 0 : 1 }}
+      exit={{ opacity: 0 }}
+      style={{ 
+        pointerEvents: isPickingLocation ? 'none' : 'auto',
+        visibility: isPickingLocation ? 'hidden' : 'visible'
+      }}
+      onClick={onClose}
+    >
       <ModalContent onClick={e => e.stopPropagation()} padding="24px">
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20 }}>
           {settlement ? 'Редактировать район' : 'Добавить новый район'}
@@ -276,7 +303,7 @@ function SettlementModal({
         <FormLabel>Название района</FormLabel>
         <FormInput value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Напр: Талгарский район" />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
           <div>
             <FormLabel>Широта (Lat)</FormLabel>
             <FormInput type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: parseFloat(e.target.value)})} />
@@ -285,6 +312,15 @@ function SettlementModal({
             <FormLabel>Долгота (Lon)</FormLabel>
             <FormInput type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: parseFloat(e.target.value)})} />
           </div>
+          <Button 
+            variant="secondary" 
+            type="button"
+            onClick={() => setPickingLocation(true)}
+            style={{ height: '37px', padding: '0 12px', fontSize: 18 }}
+            title="Указать на карте"
+          >
+            📍
+          </Button>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
@@ -342,7 +378,7 @@ export function RegionDetail() {
   
   const { user } = useAuthStore();
   const qc = useQueryClient();
-  const isAdmin = user?.role === 'superadmin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
   const [editingSettlement, setEditingSettlement] = useState<any>(null);
   const [isAdding, setIsAdding] = useState(false);

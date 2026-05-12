@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { authApi, telegramApi } from '@/services/api';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { Link } from 'react-router-dom';
 import { useNotificationStore } from '@/features/notifications/useNotificationStore';
 import { useThemeStore } from '@/styles/useThemeStore';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
@@ -225,6 +226,7 @@ const Badge = styled(motion.span)`
 `;
 
 const ROLE_LABELS: Record<string, string> = {
+  admin: 'Администратор',
   superadmin: 'Суперадмин',
   director: 'Директор',
   regional_manager: 'Рег. менеджер',
@@ -235,10 +237,11 @@ const ROLE_LABELS: Record<string, string> = {
 
 const NAV_ITEMS = [
   { to: '/map', icon: '/icons/map.png', label: 'Карта' },
-  { to: '/dashboard', icon: '/icons/analytics.png', label: 'Аналитика', roles: ['superadmin', 'director', 'regional_manager', 'analyst'] },
+  { to: '/dashboard', icon: '/icons/analytics.png', label: 'Аналитика', roles: ['admin', 'superadmin', 'director', 'regional_manager', 'analyst'] },
   { to: '/tasks', icon: '/icons/tasks.png', label: 'Задачи' },
-  { to: '/district-accounts', icon: '🔑', label: 'Учетки', roles: ['superadmin', 'director', 'regional_manager'] },
-  { to: '/admin', icon: '⚙️', label: 'Управление', roles: ['superadmin'] },
+  { to: '/taskops', icon: '📋', label: 'Проекты' },
+  { to: '/district-accounts', icon: '🔑', label: 'Учетки', roles: ['admin', 'superadmin', 'director', 'regional_manager'] },
+  { to: '/admin', icon: '⚙️', label: 'Управление', roles: ['admin', 'superadmin'] },
 ];
 
 
@@ -421,11 +424,21 @@ export function Header() {
                 {!user?.telegram_chat_id && (
                   <DropItem onClick={async () => {
                     const { data } = await telegramApi.getBindCode();
-                    const botUsername = "eMedosmotrBot"; // This should be in config
+                    const botUsername = "eMedosmotrBot";
                     window.open(`https://t.me/${botUsername}?start=bind_${data.code}`, '_blank');
                     setShowMenu(false);
                   }}>
                     <span>🤖</span> Привязать Telegram
+                  </DropItem>
+                )}
+                {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                  <DropItem
+                    as={Link}
+                    to="/settings"
+                    onClick={() => setShowMenu(false)}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <span>⚙️</span> Настройки
                   </DropItem>
                 )}
                 <DropItem className="danger" onClick={handleLogout}>

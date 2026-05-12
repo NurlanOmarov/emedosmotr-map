@@ -283,7 +283,14 @@ interface Props {
 
 export function AddLocationModal({ onClose }: Props) {
   const qc = useQueryClient();
-  const { selectedRegionId, selectedSettlementId } = useMapViewStore();
+  const { 
+    selectedRegionId, 
+    selectedSettlementId, 
+    isPickingLocation, 
+    setPickingLocation, 
+    pickedCoords, 
+    setPickedCoords 
+  } = useMapViewStore();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [successMsg, setSuccessMsg] = useState('');
@@ -300,6 +307,17 @@ export function AddLocationModal({ onClose }: Props) {
   const [coordsError, setCoordsError] = useState('');
   const [status, setStatus] = useState<StatusType>('critical');
   const [notes, setNotes] = useState('');
+
+  // Sync picked coords from map
+  useEffect(() => {
+    if (pickedCoords) {
+      const lat = pickedCoords[0].toFixed(6);
+      const lon = pickedCoords[1].toFixed(6);
+      setCoords(`${lat}, ${lon}`);
+      setCoordsError('');
+      setPickedCoords(null);
+    }
+  }, [pickedCoords, setPickedCoords]);
 
   const parseCoords = (value: string): { lat: number; lon: number } | null => {
     const clean = value.trim().replace(/\s+/g, ' ');
@@ -373,9 +391,13 @@ export function AddLocationModal({ onClose }: Props) {
   return (
     <Overlay
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      animate={{ opacity: isPickingLocation ? 0 : 1 }}
       exit={{ opacity: 0 }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ 
+        pointerEvents: isPickingLocation ? 'none' : 'auto',
+        visibility: isPickingLocation ? 'hidden' : 'visible'
+      }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <Modal
         initial={{ scale: 0.94, opacity: 0, y: 20 }}
@@ -479,12 +501,25 @@ export function AddLocationModal({ onClose }: Props) {
 
               <FormGroup>
                 <Label>Координаты *</Label>
-                <Input
-                  value={coords}
-                  onChange={e => handleCoordsChange(e.target.value)}
-                  placeholder="43.302819, 77.239681"
-                  style={coordsError ? { borderColor: 'rgba(239,68,68,0.5)' } : undefined}
-                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Input
+                    value={coords}
+                    onChange={e => handleCoordsChange(e.target.value)}
+                    placeholder="43.302819, 77.239681"
+                    style={coordsError ? { borderColor: 'rgba(239,68,68,0.5)' } : undefined}
+                  />
+                  <Btn
+                    $variant="ghost"
+                    type="button"
+                    onClick={() => setPickingLocation(true)}
+                    style={{ flex: '0 0 44px', padding: 0, fontSize: 18 }}
+                    title="Указать на карте"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    📍
+                  </Btn>
+                </div>
                 {coordsError
                   ? <span style={{ fontSize: 11, color: '#F87171', marginTop: 4, display: 'block' }}>{coordsError}</span>
                   : coords && parseCoords(coords) && (

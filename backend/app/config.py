@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_USERNAME: str = ""
 
     DEBUG: bool = False
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:5173"]
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176"]
 
     MEDIA_ROOT: str = "./media"
     MAX_FILE_SIZE_MB: int = 10

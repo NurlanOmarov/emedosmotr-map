@@ -49,3 +49,25 @@ async def ws_tasks(websocket: WebSocket, token: str = Query(...)):
                 await websocket.send_json({"type": "pong"})
     except (WebSocketDisconnect, asyncio.TimeoutError):
         ws_manager.disconnect(websocket, rooms)
+
+
+@router.websocket("/ws/taskops")
+async def ws_taskops(websocket: WebSocket, token: str = Query(...)):
+    try:
+        payload = decode_token(token)
+    except Exception:
+        await websocket.close(code=4001)
+        return
+
+    user_id = payload.get("sub", "unknown")
+    role = payload.get("role", "unknown")
+    rooms = ["taskops_global", f"taskops_user_{user_id}", f"taskops_role_{role}"]
+
+    await ws_manager.connect(websocket, rooms)
+    try:
+        while True:
+            data = await asyncio.wait_for(websocket.receive_json(), timeout=35)
+            if data.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+    except (WebSocketDisconnect, asyncio.TimeoutError):
+        ws_manager.disconnect(websocket, rooms)

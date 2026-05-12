@@ -60,6 +60,7 @@ const RoleBadge = styled.span<{ $role: string }>`
   font-weight: 600;
   background: ${({ $role }) => {
     switch ($role) {
+      case 'admin':
       case 'superadmin': return 'rgba(239, 68, 68, 0.1)';
       case 'director': return 'rgba(139, 92, 246, 0.1)';
       case 'regional_manager': return 'rgba(59, 130, 246, 0.1)';
@@ -69,6 +70,7 @@ const RoleBadge = styled.span<{ $role: string }>`
   }};
   color: ${({ $role }) => {
     switch ($role) {
+      case 'admin':
       case 'superadmin': return '#EF4444';
       case 'director': return '#8B5CF6';
       case 'regional_manager': return '#3B82F6';

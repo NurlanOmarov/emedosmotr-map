@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-NotificationType = Literal["info", "success", "warning", "error", "new_task", "task_status", "deadline"]
+NotificationType = Literal["info", "success", "warning", "error", "new_task", "task_status", "deadline", "mention"]
 
 
 class NotificationBase(BaseModel):

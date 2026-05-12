@@ -49,7 +49,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.tasks_celery.celery_app worker --loglevel=info
+    command: celery -A app.celery_app worker --loglevel=info
     depends_on:
       postgres:
         condition: service_healthy

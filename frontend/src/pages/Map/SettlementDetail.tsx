@@ -245,7 +245,7 @@ export function SettlementDetail() {
 
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const canViewAccounts = user?.role && ['superadmin', 'director', 'regional_manager'].includes(user.role);
+  const canViewAccounts = user?.role && ['admin', 'superadmin', 'director', 'regional_manager'].includes(user.role);
 
   const [activeTab, setActiveTab] = useState<'locations' | 'tasks' | 'accounts'>('locations');
 
