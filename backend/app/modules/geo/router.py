@@ -1,7 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+import hashlib
+import json
+
+import redis.asyncio as redis
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.geo import Region, Settlement
@@ -17,6 +23,24 @@ from app.schemas.geo import (
 )
 
 router = APIRouter(prefix="/geo", tags=["Geo"])
+
+# Redis cache key and TTL
+_REGIONS_GEO_CACHE_KEY = "geo:regions:with_geometry"
+_REGIONS_GEO_TTL = 3600  # 1 hour
+
+
+async def _get_redis() -> redis.Redis:
+    return redis.from_url(settings.REDIS_URL, decode_responses=True)
+
+
+async def _invalidate_regions_cache() -> None:
+    """Call this when region geometry is updated."""
+    try:
+        r = await _get_redis()
+        await r.delete(_REGIONS_GEO_CACHE_KEY)
+        await r.aclose()
+    except Exception:
+        pass
 
 
 @router.get("/oblasts", response_model=list[OblastResponse])
@@ -61,11 +85,34 @@ async def delete_oblast(
 
 @router.get("/regions", response_model=list[RegionResponse])
 async def get_regions(
+    request: Request,
     oblast_id: int | None = Query(None),
     include_geometry: bool = Query(False),
     _: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # For geometry requests without oblast filter, use Redis cache
+    if include_geometry and oblast_id is None:
+        try:
+            r = await _get_redis()
+            cached = await r.get(_REGIONS_GEO_CACHE_KEY)
+            await r.aclose()
+            if cached:
+                # ETag: skip body if client already has it
+                etag = hashlib.md5(cached.encode()).hexdigest()
+                if_none_match = request.headers.get("if-none-match")
+                if if_none_match and if_none_match.strip('"') == etag:
+                    return Response(status_code=304)
+                return JSONResponse(
+                    content=json.loads(cached),
+                    headers={
+                        "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+                        "ETag": f'"{etag}"',
+                    },
+                )
+        except Exception:
+            pass  # Redis down — fall through to DB
+
     query = select(Region).order_by(Region.name)
     if oblast_id:
         query = query.where(Region.oblast_id == oblast_id)
@@ -77,6 +124,25 @@ async def get_regions(
         if not include_geometry:
             data.geometry_json = None
         out.append(data)
+
+    # Cache geometry result in Redis
+    if include_geometry and oblast_id is None:
+        try:
+            payload = json.dumps([d.model_dump(mode="json") for d in out], ensure_ascii=False)
+            r = await _get_redis()
+            await r.set(_REGIONS_GEO_CACHE_KEY, payload, ex=_REGIONS_GEO_TTL)
+            await r.aclose()
+            etag = hashlib.md5(payload.encode()).hexdigest()
+            return JSONResponse(
+                content=json.loads(payload),
+                headers={
+                    "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+                    "ETag": f'"{etag}"',
+                },
+            )
+        except Exception:
+            pass
+
     return out
 
 

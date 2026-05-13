@@ -876,8 +876,50 @@ export function MapPage() {
 
   const { data: regionsData } = useQuery({
     queryKey: ['regions-geo'],
-    queryFn: () => geoApi.getRegions(undefined, true).then(res => res.data),
-    enabled: regionsLayerActive && mapReady,
+    queryFn: async () => {
+      // Try localStorage cache first for instant display
+      const cached = localStorage.getItem('regions-geo-cache');
+      const cacheTime = localStorage.getItem('regions-geo-cache-time');
+      const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 minutes
+
+      // Fetch from API (will use Redis cache + ETag on server)
+      try {
+        const res = await geoApi.getRegions(undefined, true);
+        const data = res.data;
+        // Persist to localStorage for next visit
+        try {
+          localStorage.setItem('regions-geo-cache', JSON.stringify(data));
+          localStorage.setItem('regions-geo-cache-time', String(Date.now()));
+        } catch { /* quota exceeded — ignore */ }
+        return data;
+      } catch {
+        // Network error — use stale localStorage cache if available
+        if (cached) return JSON.parse(cached);
+        throw new Error('Failed to load regions');
+      }
+    },
+    // Start fetching IMMEDIATELY, don't wait for map
+    enabled: regionsLayerActive,
+    // Keep data fresh for 5 minutes, don't refetch on window focus
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    // Use localStorage cache as initial data for instant render
+    initialData: () => {
+      try {
+        const cached = localStorage.getItem('regions-geo-cache');
+        const cacheTime = localStorage.getItem('regions-geo-cache-time');
+        if (cached && cacheTime) {
+          const age = Date.now() - Number(cacheTime);
+          if (age < 30 * 60 * 1000) return JSON.parse(cached);
+        }
+      } catch { /* ignore */ }
+      return undefined;
+    },
+    initialDataUpdatedAt: () => {
+      const cacheTime = localStorage.getItem('regions-geo-cache-time');
+      return cacheTime ? Number(cacheTime) : 0;
+    },
   });
 
   const { data: featuresData } = useQuery({
