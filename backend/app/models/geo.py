@@ -26,6 +26,8 @@ class Region(Base):
     center_lon: Mapped[float | None] = mapped_column(Numeric)
     geom: Mapped[Any | None] = mapped_column(Geometry("POLYGON", srid=4326), nullable=True)
 
+    is_connected: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+
     # Engineer info
     engineer_name: Mapped[str | None] = mapped_column(String(255))
     engineer_phone: Mapped[str | None] = mapped_column(String(50))

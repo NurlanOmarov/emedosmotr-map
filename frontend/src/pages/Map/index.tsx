@@ -1564,13 +1564,17 @@ export function MapPage() {
           }
         };
 
+        const regionColor = region.is_connected ? '#22C55E' : '#3B82F6';
+
         polygonRings.forEach((rings) => {
           const polygon = new window.ymaps.Polygon(rings, {
-            hintContent: region.name,
+            hintContent: region.is_connected
+              ? `${region.name} — подключён к eMedosmotr`
+              : `${region.name} — не подключён`,
           }, {
-            fillColor: '#3B82F6',
+            fillColor: regionColor,
             fillOpacity: 0.08,
-            strokeColor: '#3B82F6',
+            strokeColor: regionColor,
             strokeWidth: 2.0,
             cursor: activeToolRef.current !== 'none' ? 'crosshair' : 'pointer',
           });

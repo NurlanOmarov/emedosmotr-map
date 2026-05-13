@@ -181,9 +181,20 @@ async def update_region(
         region.oblast_id = body.oblast_id
     region.engineer_name = body.engineer_name
     region.engineer_phone = body.engineer_phone
-    
+    if body.is_connected is not None:
+        region.is_connected = body.is_connected
+
     await db.commit()
     await db.refresh(region)
+
+    # Invalidate geometry cache so map reflects new is_connected value
+    try:
+        r = await _get_redis()
+        await r.delete(_REGIONS_GEO_CACHE_KEY)
+        await r.aclose()
+    except Exception:
+        pass
+
     return region
 
 

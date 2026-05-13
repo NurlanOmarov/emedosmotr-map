@@ -24,6 +24,7 @@ class RegionResponse(BaseModel):
     geometry_json: dict | None = None
     engineer_name: str | None = None
     engineer_phone: str | None = None
+    is_connected: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -32,6 +33,7 @@ class RegionUpdate(BaseModel):
     oblast_id: int | None = None
     engineer_name: str | None = None
     engineer_phone: str | None = None
+    is_connected: bool | None = None
 
 
 class SettlementResponse(BaseModel):

@@ -221,18 +221,19 @@ const ArrowIcon = styled.span`
   font-size: 12px;
 `;
 
-function RegionEditModal({ 
-  region, 
-  onClose, 
-  onSave 
-}: { 
-  region: any, 
-  onClose: () => void, 
-  onSave: (data: any) => void 
+function RegionEditModal({
+  region,
+  onClose,
+  onSave
+}: {
+  region: any,
+  onClose: () => void,
+  onSave: (data: any) => void
 }) {
   const [form, setForm] = useState({
     engineer_name: region.engineer_name || '',
     engineer_phone: region.engineer_phone || '',
+    is_connected: region.is_connected ?? false,
   });
 
   return (
@@ -240,6 +241,38 @@ function RegionEditModal({
       <ModalContent onClick={e => e.stopPropagation()} padding="24px">
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20 }}>
           Редактировать регион: {region.name}
+        </div>
+
+        <FormLabel>Статус подключения к eMedosmotr</FormLabel>
+        <div
+          onClick={() => setForm(f => ({ ...f, is_connected: !f.is_connected }))}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '10px 14px',
+            borderRadius: 10,
+            border: `1px solid ${form.is_connected ? '#22C55E44' : 'rgba(255,255,255,0.08)'}`,
+            background: form.is_connected ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            marginBottom: 4,
+          }}
+        >
+          <div style={{
+            width: 36, height: 20, borderRadius: 10,
+            background: form.is_connected ? '#22C55E' : '#334155',
+            position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+          }}>
+            <div style={{
+              position: 'absolute', top: 3, left: form.is_connected ? 19 : 3,
+              width: 14, height: 14, borderRadius: '50%', background: '#fff',
+              transition: 'left 0.2s',
+            }} />
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 500, color: form.is_connected ? '#22C55E' : '#94A3B8' }}>
+            {form.is_connected ? 'Подключён к eMedosmotr' : 'Не подключён'}
+          </span>
         </div>
 
         <FormLabel>ФИО Инженера</FormLabel>
@@ -441,6 +474,19 @@ export function RegionDetail() {
         <StatsRow>
           <StatLabel>Всего районов:</StatLabel>
           <StatValue>{isLoading ? '...' : settlements?.length || 0}</StatValue>
+          {region && (
+            <span style={{
+              marginLeft: 'auto',
+              fontSize: 11, fontWeight: 700,
+              padding: '3px 8px', borderRadius: 20,
+              background: region.is_connected ? 'rgba(34,197,94,0.12)' : 'rgba(100,116,139,0.12)',
+              color: region.is_connected ? '#22C55E' : '#64748B',
+              border: `1px solid ${region.is_connected ? '#22C55E33' : '#64748B22'}`,
+              letterSpacing: '0.03em',
+            }}>
+              {region.is_connected ? '● Подключён' : '○ Не подключён'}
+            </span>
+          )}
         </StatsRow>
 
         {region?.engineer_name && (
