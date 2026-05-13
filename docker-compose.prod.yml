@@ -15,6 +15,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    mem_limit: 384m
     logging:
       driver: "json-file"
       options:
@@ -24,6 +25,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
     expose:
       - "6379"
     healthcheck:
@@ -31,6 +33,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    mem_limit: 96m
     logging:
       driver: "json-file"
       options:
@@ -42,7 +45,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
     expose:
       - "8000"
     depends_on:
@@ -56,10 +59,7 @@ services:
       REDIS_URL: redis://redis:6379/0
     volumes:
       - media_data:/app/media
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    mem_limit: 384m
     logging:
       driver: "json-file"
       options:
@@ -71,7 +71,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: celery -A app.celery_app worker --loglevel=info
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,10 +83,7 @@ services:
       REDIS_URL: redis://redis:6379/0
     volumes:
       - media_data:/app/media
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    mem_limit: 256m
     logging:
       driver: "json-file"
       options:
@@ -108,10 +105,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/emedosmotr_map
       REDIS_URL: redis://redis:6379/0
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+    mem_limit: 128m
     logging:
       driver: "json-file"
       options:
