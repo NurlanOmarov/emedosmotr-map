@@ -59,6 +59,10 @@ from app.services.notification import notification_service
 router = APIRouter(prefix="/v1/taskops", tags=["TaskOps"])
 
 
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 async def _audit(
     db: AsyncSession,
     user: User,
@@ -431,7 +435,7 @@ async def list_tasks(
     if cycle_id:
         query = query.where(TaskopsTask.cycle_id == cycle_id)
     if q:
-        query = query.where(TaskopsTask.title.ilike(f"%{q}%"))
+        query = query.where(TaskopsTask.title.ilike(f"%{_escape_like(q)}%"))
 
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar_one()
     result = await db.execute(
@@ -1266,7 +1270,7 @@ async def search_mention_users(
     """Return users matching q for @mention autocomplete."""
     stmt = select(User.id, User.username, User.full_name).where(User.deleted_at.is_(None))
     if q:
-        pattern = f"%{q}%"
+        pattern = f"%{_escape_like(q)}%"
         stmt = stmt.where(
             or_(User.full_name.ilike(pattern), User.username.ilike(pattern))
         )
@@ -1495,7 +1499,7 @@ async def list_notes(
 ):
     stmt = select(TaskopsNote).where(TaskopsNote.user_id == current_user.id, TaskopsNote.deleted_at.is_(None))
     if q:
-        pattern = f"%{q}%"
+        pattern = f"%{_escape_like(q)}%"
         stmt = stmt.where(or_(TaskopsNote.title.ilike(pattern), TaskopsNote.content.ilike(pattern)))
     
     result = await db.execute(

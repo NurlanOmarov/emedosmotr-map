@@ -3,12 +3,15 @@ import shutil
 import uuid
 from datetime import UTC, datetime
 
+import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from geoalchemy2 import WKTElement
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
+
 from app.middleware.auth import get_current_user, require_roles
 from app.models.equipment import MedicalEquipment
 from app.models.location import Commission, Location, MedicalOrganization
@@ -33,6 +36,13 @@ from app.schemas.location import (
 )
 from app.schemas.research import ResearchCreate, ResearchResponse, ResearchUpdate
 from app.types import MANDATORY_RESEARCH_TYPES
+
+log = structlog.get_logger()
+
+
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
 
 WRITER_ROLES = ("superadmin", "regional_manager", "engineer")
 MANAGER_ROLES = ("superadmin", "regional_manager", "director", "admin")
@@ -101,7 +111,7 @@ async def list_locations(
     if status:
         query = query.where(Location.status == status)
     if q:
-        query = query.where(Location.name.ilike(f"%{q}%"))
+        query = query.where(Location.name.ilike(f"%{_escape_like(q)}%"))
 
     total_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(total_q)).scalar_one()
@@ -158,6 +168,7 @@ async def create_location(
             res = MedicalResearch(organization_id=org.id, research_type=r_type, status="critical")
             db.add(res)
 
+    await db.commit()
     await db.refresh(loc)
     return loc
 
@@ -191,7 +202,7 @@ async def get_map_features(
             pass
 
     items = (await db.execute(q)).scalars().all()
-    print(f"DEBUG: get_map_features called. User: {current_user.username}, count: {len(items)}")
+    log.info("get_map_features", user=current_user.username, count=len(items))
     features = []
     for loc in items:
         if loc.lat is None or loc.lon is None:
@@ -405,6 +416,7 @@ async def get_medical_orgs(
                 res = MedicalResearch(organization_id=org.id, research_type=r_type, status="critical")
                 db.add(res)
 
+            await db.commit()
             await db.refresh(org)
             return [org]
 
@@ -582,9 +594,13 @@ async def upload_location_image(
     if not loc:
         raise HTTPException(404, "Location not found")
     
+    max_bytes = settings.MAX_FILE_SIZE_MB * 1024 * 1024
+    if file.size and file.size > max_bytes:
+        raise HTTPException(413, f"File too large (max {settings.MAX_FILE_SIZE_MB} MB)")
+
     # Create directory if not exists
     os.makedirs("uploads/locations", exist_ok=True)
-    
+
     # Save file
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:

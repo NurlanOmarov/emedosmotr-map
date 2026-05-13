@@ -24,6 +24,10 @@ from app.schemas.geo import (
 
 router = APIRouter(prefix="/geo", tags=["Geo"])
 
+
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
 # Redis cache key and TTL
 _REGIONS_GEO_CACHE_KEY = "geo:regions:with_geometry"
 _REGIONS_GEO_TTL = 3600  # 1 hour
@@ -195,7 +199,7 @@ async def get_settlements(
     if region_id:
         query = query.where(Settlement.region_id == region_id)
     if q:
-        query = query.where(Settlement.name.ilike(f"%{q}%"))
+        query = query.where(Settlement.name.ilike(f"%{_escape_like(q)}%"))
     query = query.order_by(Settlement.name)
     if limit:
         query = query.limit(limit)

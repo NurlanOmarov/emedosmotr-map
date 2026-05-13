@@ -2,12 +2,15 @@ import { useNotificationStore } from '@/features/notifications/useNotificationSt
 
 type EventHandler = (data: any) => void;
 
+const BACKOFF_BASE_MS = 1000;
+const BACKOFF_MAX_MS = 60_000;
+
 class WebSocketService {
   private sockets: Map<string, WebSocket> = new Map();
-  private reconnectIntervals: Map<string, any> = new Map();
+  private reconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private reconnectAttempts: Map<string, number> = new Map();
   private listeners: Map<string, Set<EventHandler>> = new Map();
 
-  // Subscribe to a specific event across any WS connection
   on(event: string, handler: EventHandler): () => void {
     if (!this.listeners.has(event)) this.listeners.set(event, new Set());
     this.listeners.get(event)!.add(handler);
@@ -21,7 +24,6 @@ class WebSocketService {
     if (!token) return;
 
     let host = import.meta.env.VITE_WS_URL;
-
     if (!host) {
       const apiUrl = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.host}/api`;
       host = apiUrl.replace(/^http/, 'ws').replace(/\/api$/, '');
@@ -30,14 +32,17 @@ class WebSocketService {
     const baseUrl = host.endsWith('/') ? host.slice(0, -1) : host;
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-    const url = `${baseUrl}${cleanPath}?token=${token}`;
-    const socket = new WebSocket(url);
+    // Token is NOT in URL — sent as first message after open
+    const socket = new WebSocket(`${baseUrl}${cleanPath}`);
 
     socket.onopen = () => {
-      console.log(`Connected to WS: ${path}`);
-      if (this.reconnectIntervals.has(path)) {
-        clearInterval(this.reconnectIntervals.get(path));
-        this.reconnectIntervals.delete(path);
+      // Auth handshake: send token as first message so it never appears in logs/history
+      socket.send(JSON.stringify({ type: 'auth', token }));
+
+      this.reconnectAttempts.set(path, 0);
+      if (this.reconnectTimers.has(path)) {
+        clearTimeout(this.reconnectTimers.get(path));
+        this.reconnectTimers.delete(path);
       }
 
       const pingInterval = setInterval(() => {
@@ -60,7 +65,6 @@ class WebSocketService {
     };
 
     socket.onclose = () => {
-      console.log(`Disconnected from WS: ${path}`);
       this.sockets.delete(path);
       this.scheduleReconnect(path);
     };
@@ -78,28 +82,32 @@ class WebSocketService {
       socket.close();
       this.sockets.delete(path);
     }
-    if (this.reconnectIntervals.has(path)) {
-      clearInterval(this.reconnectIntervals.get(path));
-      this.reconnectIntervals.delete(path);
+    if (this.reconnectTimers.has(path)) {
+      clearTimeout(this.reconnectTimers.get(path));
+      this.reconnectTimers.delete(path);
     }
+    this.reconnectAttempts.delete(path);
   }
 
   private scheduleReconnect(path: string) {
-    if (this.reconnectIntervals.has(path)) return;
+    if (this.reconnectTimers.has(path)) return;
 
-    const interval = setInterval(() => {
-      console.log(`Attempting to reconnect to WS: ${path}`);
+    const attempts = this.reconnectAttempts.get(path) ?? 0;
+    const delay = Math.min(BACKOFF_BASE_MS * 2 ** attempts, BACKOFF_MAX_MS);
+    this.reconnectAttempts.set(path, attempts + 1);
+
+    const timer = setTimeout(() => {
+      this.reconnectTimers.delete(path);
       this.connect(path);
-    }, 5000);
+    }, delay);
 
-    this.reconnectIntervals.set(path, interval);
+    this.reconnectTimers.set(path, timer);
   }
 
   private handleMessage(payload: any) {
     const { event, data } = payload;
     const { addNotification } = useNotificationStore.getState();
 
-    // Dispatch to registered listeners
     this.listeners.get(event)?.forEach((handler) => {
       try { handler(data); } catch (e) { console.error('WS listener error', e); }
     });
@@ -128,9 +136,10 @@ class WebSocketService {
 
   disconnectAll() {
     this.sockets.forEach(s => s.close());
-    this.reconnectIntervals.forEach(i => clearInterval(i));
+    this.reconnectTimers.forEach(t => clearTimeout(t));
     this.sockets.clear();
-    this.reconnectIntervals.clear();
+    this.reconnectTimers.clear();
+    this.reconnectAttempts.clear();
   }
 }
 
