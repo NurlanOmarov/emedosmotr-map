@@ -73,10 +73,12 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
             docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
 
-            # Seed geo data if regions table is empty
-            REGION_COUNT=$(docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d emedosmotr_map -tAc "SELECT COUNT(*) FROM regions;")
-            if [ "$REGION_COUNT" = "0" ]; then
-              echo "Seeding geo data..."
+            # Seed geo data if any expected region is missing
+            EXPECTED_CODES="'astana_region','almaty_city','shymkent_region','abairjay_region'"
+            MISSING=$(docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d emedosmotr_map -tAc \
+              "SELECT COUNT(*) FROM regions WHERE code IN ($EXPECTED_CODES);")
+            if [ "$MISSING" != "4" ]; then
+              echo "Seeding geo data (found $MISSING/4 expected regions)..."
               docker compose -f docker-compose.prod.yml exec -T backend sh -c 'PYTHONPATH=/app python scripts/seed_geo.py'
             fi
 
