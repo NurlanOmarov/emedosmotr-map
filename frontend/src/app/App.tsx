@@ -250,9 +250,9 @@ export function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      wsService.connect('/ws/map');
-      wsService.connect('/ws/tasks');
-      wsService.connect('/ws/taskops');
+      wsService.connect('/map');
+      wsService.connect('/tasks');
+      wsService.connect('/taskops');
 
       // Request push notification permission on first entry if supported
       if ('Notification' in window && Notification.permission === 'default') {
