@@ -45,7 +45,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
     expose:
       - "8000"
     depends_on:
@@ -60,6 +60,7 @@ services:
     volumes:
       - media_data:/app/media
     mem_limit: 384m
+    memswap_limit: 640m
     logging:
       driver: "json-file"
       options:
@@ -84,6 +85,7 @@ services:
     volumes:
       - media_data:/app/media
     mem_limit: 256m
+    memswap_limit: 512m
     logging:
       driver: "json-file"
       options:
@@ -106,6 +108,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/emedosmotr_map
       REDIS_URL: redis://redis:6379/0
     mem_limit: 128m
+    memswap_limit: 256m
     logging:
       driver: "json-file"
       options:
