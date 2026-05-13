@@ -193,7 +193,7 @@ async def seed() -> None:
             await db.execute(
                 text(
                     "INSERT INTO roles (name, display_name, description, color, is_system, permissions) "
-                    "VALUES (:name, :display_name, :description, :color, :is_system, :permissions::jsonb)"
+                    "VALUES (:name, :display_name, :description, :color, :is_system, CAST(:permissions AS jsonb))"
                 ),
                 {
                     "name": role["name"],
