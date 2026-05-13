@@ -8,6 +8,7 @@ import { geoApi, rolesApi } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { User, Region, Role } from '@/types';
 import { motion } from 'framer-motion';
+import { useEscapeKey } from '@/hooks/useKeyboardShortcuts';
 
 const Overlay = styled(motion.div)`
   position: fixed;

@@ -4,6 +4,7 @@ import styled, { useTheme } from 'styled-components';
 import { useNotificationStore } from './useNotificationStore';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useEscapeKey } from '@/hooks/useKeyboardShortcuts';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import api from '@/services/api';
@@ -266,6 +267,8 @@ export function NotificationDrawer() {
     markAllAsRead, 
     clearNotifications 
   } = useNotificationStore();
+
+  useEscapeKey(() => setDrawerOpen(false));
 
   const { 
     isSupported, 

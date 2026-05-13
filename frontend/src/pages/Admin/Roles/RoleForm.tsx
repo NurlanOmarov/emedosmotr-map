@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { Button } from '@/components/ui/Button';
+import { useEscapeKey } from '@/hooks/useKeyboardShortcuts';
 import type { Role } from '@/types';
 
 const Overlay = styled(motion.div)`
@@ -158,6 +159,7 @@ interface Props {
 }
 
 export function RoleForm({ role, onClose, onSubmit, isSubmitting }: Props) {
+  useEscapeKey(onClose);
   const [form, setForm] = useState<RoleFormData>({
     name: role?.name ?? '',
     display_name: role?.display_name ?? '',

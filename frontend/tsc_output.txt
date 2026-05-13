@@ -1,0 +1,301 @@
+
+> emedosmotr-map-frontend@0.1.0 type-check
+> tsc --noEmit
+
+src/components/Layout/Header.tsx(42,13): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(42,17): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(42,19): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(42,21): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(42,21): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(46,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(47,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(47,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(48,10): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(49,17): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(49,25): error TS1124: Digit expected.
+src/components/Layout/Header.tsx(50,20): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(50,25): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(50,28): error TS1146: Declaration expected.
+src/components/Layout/Header.tsx(57,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(58,9): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(64,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(65,9): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(66,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(66,13): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(66,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(66,18): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(67,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(67,19): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(68,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(68,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(69,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(70,10): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(71,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(72,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(72,22): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(72,22): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(73,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(75,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(75,4): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(75,5): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(76,12): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(77,17): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(80,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(80,4): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(80,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(81,12): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(82,17): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(83,14): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(83,17): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(83,23): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(86,19): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(87,22): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(87,27): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(87,30): error TS1146: Declaration expected.
+src/components/Layout/Header.tsx(92,20): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(92,25): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(92,28): error TS1146: Declaration expected.
+src/components/Layout/Header.tsx(93,15): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(94,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(94,18): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(100,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(101,10): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(102,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(107,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(108,9): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(109,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(109,13): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(109,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(109,18): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(109,18): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(109,22): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(109,22): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(109,22): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(109,26): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(109,26): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(110,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(111,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(111,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(111,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(112,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(112,20): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(113,10): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(114,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(114,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(116,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(116,22): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(116,22): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(117,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(117,4): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(117,5): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(117,25): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(117,77): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(117,79): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(121,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(122,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(123,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(123,19): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(124,34): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(124,39): error TS1127: Invalid character.
+src/components/Layout/Header.tsx(124,40): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(124,41): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(124,41): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(124,48): error TS1127: Invalid character.
+src/components/Layout/Header.tsx(124,49): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(124,50): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(124,50): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(126,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(127,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(128,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(128,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(129,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(131,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(135,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(135,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(136,10): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(137,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(137,13): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(137,17): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(137,17): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(138,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(138,22): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(139,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(140,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(140,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(140,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(141,20): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(141,26): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(141,29): error TS1146: Declaration expected.
+src/components/Layout/Header.tsx(148,10): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(149,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(150,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(151,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(152,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(152,27): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(153,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(153,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(153,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(154,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(154,20): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(155,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(156,10): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(157,13): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(157,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(161,14): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(163,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(164,9): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(165,14): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(165,14): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(165,19): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(165,19): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(166,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(166,19): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(167,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(167,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(168,10): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(170,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(170,22): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(170,22): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(171,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(171,4): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(171,5): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(171,25): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(171,72): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(172,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(172,4): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(172,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(172,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(172,62): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(172,63): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(172,64): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(172,84): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(177,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(178,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(179,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(179,20): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(180,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(181,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(181,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(181,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(182,10): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(184,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(185,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(187,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(187,22): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(187,22): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(188,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(188,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(190,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(190,4): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(190,5): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(191,17): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(192,12): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(193,17): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(193,19): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(200,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(200,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(205,10): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(206,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(207,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(209,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(209,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(210,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(211,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(211,13): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(211,17): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(211,17): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(212,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(212,19): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(213,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(213,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(213,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(214,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(214,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(215,13): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(240,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(241,9): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(242,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(242,13): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(242,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(242,18): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(243,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(244,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(244,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(244,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(245,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(245,19): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(246,10): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(247,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(247,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(249,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(249,22): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(249,22): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(250,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(252,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(252,4): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(252,5): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(253,17): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(254,12): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(255,17): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(255,19): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(258,20): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(258,25): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(258,28): error TS1146: Declaration expected.
+src/components/Layout/Header.tsx(259,15): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(259,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(259,20): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(259,20): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(260,11): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(265,12): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(265,16): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(266,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(267,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(267,15): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(267,21): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(268,16): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(268,19): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(269,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(269,13): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(269,17): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(269,17): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(270,20): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(270,25): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(270,28): error TS1146: Declaration expected.
+src/components/Layout/Header.tsx(276,12): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(277,13): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/components/Layout/Header.tsx(279,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(280,18): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(281,14): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(283,3): error TS1434: Unexpected keyword or identifier.
+src/components/Layout/Header.tsx(284,16): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(285,17): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(286,15): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(287,15): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(287,47): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(287,50): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(287,64): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(287,67): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(288,23): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(288,55): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(288,58): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(288,72): error TS1005: ',' expected.
+src/components/Layout/Header.tsx(288,75): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(332,50): error TS1005: ':' expected.
+src/components/Layout/Header.tsx(418,34): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(420,19): error TS1128: Declaration or statement expected.
+src/components/Layout/Header.tsx(420,20): error TS1128: Declaration or statement expected.
+src/components/Layout/Header.tsx(420,21): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(421,37): error TS1005: ';' expected.
+src/components/Layout/Header.tsx(422,19): error TS1128: Declaration or statement expected.
+src/components/Layout/Header.tsx(423,17): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(423,18): error TS1128: Declaration or statement expected.
+src/components/Layout/Header.tsx(437,15): error TS1128: Declaration or statement expected.
+src/components/Layout/Header.tsx(438,13): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(438,15): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(439,11): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(439,12): error TS1128: Declaration or statement expected.
+src/components/Layout/Header.tsx(440,9): error TS1128: Declaration or statement expected.
+src/components/Layout/Header.tsx(441,7): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(442,5): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(443,3): error TS1109: Expression expected.
+src/components/Layout/Header.tsx(444,1): error TS1128: Declaration or statement expected.

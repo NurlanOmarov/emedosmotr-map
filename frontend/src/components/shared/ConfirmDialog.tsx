@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
+import { useEscapeKey } from '@/hooks/useKeyboardShortcuts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -263,7 +264,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       {state && (
-        <Overlay $closing={closing} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <Overlay $closing={closing} onClick={handleOverlayClick}>
           <Dialog $closing={closing} role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
             <IconWrap $variant={variant}>
               {variant === 'danger' ? <DangerIcon /> : variant === 'warning' ? <WarningIcon /> : <InfoIcon />}

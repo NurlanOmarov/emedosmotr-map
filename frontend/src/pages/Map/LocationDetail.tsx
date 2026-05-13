@@ -1546,6 +1546,22 @@ export function LocationDetail({ locationId }: Props) {
   });
 
   const canEdit = !!user?.role && ['admin', 'superadmin', 'regional_manager', 'engineer'].includes(user.role);
+  const canDelete = !!user?.role && ['superadmin', 'regional_manager'].includes(user.role);
+
+  const deleteLocation = useMutation({
+    mutationFn: () => locationsApi.delete(locationId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['map-features'] });
+      backToMap();
+      triggerUpdate();
+    },
+  });
+
+  const handleDelete = () => {
+    if (window.confirm('Вы уверены, что хотите удалить этот объект с карты? Это действие нельзя будет отменить.')) {
+      deleteLocation.mutate();
+    }
+  };
 
   if (isLoading) {
     return (
@@ -1695,6 +1711,18 @@ export function LocationDetail({ locationId }: Props) {
         {canEdit && (
           <Button variant="secondary" size="sm" style={{ flex: 1 }}>
             ✏️ Редактировать
+          </Button>
+        )}
+        {canDelete && (
+          <Button 
+            variant="danger" 
+            size="sm" 
+            onClick={handleDelete}
+            loading={deleteLocation.isPending}
+            style={{ flex: 0, minWidth: '40px' }}
+            title="Удалить объект"
+          >
+            <LuTrash2 size={16} />
           </Button>
         )}
       </Actions>

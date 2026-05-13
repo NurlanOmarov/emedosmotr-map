@@ -113,90 +113,92 @@ export function TaskModal({
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={e => e.stopPropagation()} padding="24px">
-        <div style={{ fontSize: 16, fontWeight: 700, color: 'inherit', marginBottom: 20 }}>
-          {task ? 'Редактировать задачу' : 'Новая задача'}
-        </div>
-        
-        <FormLabel>Заголовок</FormLabel>
-        <FormInput value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="Напр: Настроить ЭКГ" />
-        
-        <FormLabel>Описание</FormLabel>
-        <FieldTextarea 
-          value={form.description} 
-          onChange={e => setForm({...form, description: e.target.value})} 
-          placeholder="Детали задачи..."
-          style={{ marginBottom: 16 }}
-        />
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <FormLabel>Тип</FormLabel>
-            <FormSelect value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-              <option value="equipment_setup">Настройка оборуд.</option>
-              <option value="internet_setup">Интернет</option>
-              <option value="training">Обучение</option>
-              <option value="inspection">Осмотр</option>
-              <option value="other">Другое</option>
-            </FormSelect>
+        <form onSubmit={(e) => { e.preventDefault(); onSave(form); }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'inherit', marginBottom: 20 }}>
+            {task ? 'Редактировать задачу' : 'Новая задача'}
           </div>
-          <div>
-            <FormLabel>Приоритет</FormLabel>
-            <FormSelect value={form.priority} onChange={e => setForm({...form, priority: e.target.value})}>
-              <option value="low">Низкий</option>
-              <option value="normal">Средний</option>
-              <option value="high">Высокий</option>
-              <option value="critical">Критичный</option>
-            </FormSelect>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <FormLabel>Исполнитель</FormLabel>
-            <FormSelect value={form.assigned_to} onChange={e => setForm({...form, assigned_to: e.target.value})}>
-              <option value="">Не назначен</option>
-              {engineers?.map(eng => (
-                <option key={eng.id} value={eng.id}>{eng.full_name}</option>
-              ))}
-            </FormSelect>
-          </div>
-          <div>
-            <FormLabel>Срок</FormLabel>
-            <FormInput type="date" value={form.due_date} onChange={e => setForm({...form, due_date: e.target.value})} />
-          </div>
-        </div>
-
-        <div>
-          <FormLabel>Оценка (часов)</FormLabel>
-          <FormInput 
-            type="number" 
-            step="0.5" 
-            value={form.estimated_hours} 
-            onChange={e => setForm({...form, estimated_hours: e.target.value})} 
-            placeholder="Напр: 2.5"
+          
+          <FormLabel>Заголовок</FormLabel>
+          <FormInput value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="Напр: Настроить ЭКГ" />
+          
+          <FormLabel>Описание</FormLabel>
+          <FieldTextarea 
+            value={form.description} 
+            onChange={e => setForm({...form, description: e.target.value})} 
+            placeholder="Детали задачи..."
+            style={{ marginBottom: 16 }}
           />
-        </div>
 
-        {task && (
-          <div>
-            <FormLabel>Статус</FormLabel>
-            <FormSelect value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
-              <option value="new">Новая</option>
-              <option value="assigned">Назначена</option>
-              <option value="in_progress">В работе</option>
-              <option value="waiting">Ожидание</option>
-              <option value="done">Выполнена</option>
-              <option value="cancelled">Отменена</option>
-            </FormSelect>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <FormLabel>Тип</FormLabel>
+              <FormSelect value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
+                <option value="equipment_setup">Настройка оборуд.</option>
+                <option value="internet_setup">Интернет</option>
+                <option value="training">Обучение</option>
+                <option value="inspection">Осмотр</option>
+                <option value="other">Другое</option>
+              </FormSelect>
+            </div>
+            <div>
+              <FormLabel>Приоритет</FormLabel>
+              <FormSelect value={form.priority} onChange={e => setForm({...form, priority: e.target.value})}>
+                <option value="low">Низкий</option>
+                <option value="normal">Средний</option>
+                <option value="high">Высокий</option>
+                <option value="critical">Критичный</option>
+              </FormSelect>
+            </div>
           </div>
-        )}
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-          <Button variant="ghost" style={{ flex: 1 }} onClick={onClose}>Отмена</Button>
-          <Button variant="primary" style={{ flex: 1 }} onClick={() => onSave(form)}>
-            {task ? 'Сохранить' : 'Создать'}
-          </Button>
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <FormLabel>Исполнитель</FormLabel>
+              <FormSelect value={form.assigned_to} onChange={e => setForm({...form, assigned_to: e.target.value})}>
+                <option value="">Не назначен</option>
+                {engineers?.map(eng => (
+                  <option key={eng.id} value={eng.id}>{eng.full_name}</option>
+                ))}
+              </FormSelect>
+            </div>
+            <div>
+              <FormLabel>Срок</FormLabel>
+              <FormInput type="date" value={form.due_date} onChange={e => setForm({...form, due_date: e.target.value})} />
+            </div>
+          </div>
+
+          <div>
+            <FormLabel>Оценка (часов)</FormLabel>
+            <FormInput 
+              type="number" 
+              step="0.5" 
+              value={form.estimated_hours} 
+              onChange={e => setForm({...form, estimated_hours: e.target.value})} 
+              placeholder="Напр: 2.5"
+            />
+          </div>
+
+          {task && (
+            <div>
+              <FormLabel>Статус</FormLabel>
+              <FormSelect value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                <option value="new">Новая</option>
+                <option value="assigned">Назначена</option>
+                <option value="in_progress">В работе</option>
+                <option value="waiting">Ожидание</option>
+                <option value="done">Выполнена</option>
+                <option value="cancelled">Отменена</option>
+              </FormSelect>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+            <Button variant="ghost" style={{ flex: 1 }} type="button" onClick={onClose}>Отмена</Button>
+            <Button variant="primary" style={{ flex: 1 }} type="submit">
+              {task ? 'Сохранить' : 'Создать'}
+            </Button>
+          </div>
+        </form>
       </ModalContent>
     </ModalOverlay>
   );

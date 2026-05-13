@@ -19,6 +19,7 @@ import {
 } from 'react-icons/lu';
 import { useTask, useUpdateTask, useTaskComments, useAddComment, useAssignableUsers, useDeleteTask, useProjectCycles } from '../api';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
+import { useEscapeKey } from '@/hooks/useKeyboardShortcuts';
 import { StatusBadge } from './StatusBadge';
 import { MentionTextarea } from './MentionTextarea';
 import { AttachmentsSection } from './AttachmentsSection';
@@ -383,6 +384,7 @@ const STATUSES: TaskopsTaskStatus[] = ['backlog', 'todo', 'in_progress', 'in_rev
 const PRIORITIES: TaskopsTaskPriority[] = ['p0_urgent', 'p1_high', 'p2_medium', 'p3_low'];
 
 export function TaskDetailPanel({ taskId, onClose }: Props) {
+  useEscapeKey(onClose);
   const navigate = useNavigate();
   const confirm = useConfirm();
   const { data: task, isLoading } = useTask(taskId);
