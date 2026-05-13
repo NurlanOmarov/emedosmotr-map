@@ -57,9 +57,8 @@ const YMapEl = styled.div<{ $whiteBg: boolean }>`
   height: 100%;
   background: ${({ $whiteBg, theme }) =>
     $whiteBg ? (theme.mode === 'dark' ? '#04080F' : '#ffffff') : theme.colors.bgSecondary};
-  transition: background 0.4s ease;
 
-  ${({ $whiteBg, theme }) => $whiteBg && theme.mode === 'dark' && `
+  ${({ theme }) => theme.mode === 'dark' && `
     [class*="ymaps-"][class*="-pane"],
     [class*="ymaps-"][class*="-tiles"],
     [class*="ymaps-"][class*="-map-bg"],
@@ -67,20 +66,6 @@ const YMapEl = styled.div<{ $whiteBg: boolean }>`
       background: #04080F !important;
     }
   `}
-  
-  /* Remove CSS filter hack and use official JSON customization instead */
-  div[class*="ymaps-"][class*="-map"] {
-    background: transparent !important;
-  }
-  
-  /* Force transparency on all internal panes */
-  [class*="ymaps-"][class*="-pane"] {
-    background: transparent !important;
-  }
-
-  canvas {
-    transition: opacity 0.4s ease;
-  }
 `;
 
 const FiltersBtn = styled(motion.button)`
@@ -899,9 +884,9 @@ export function MapPage() {
     },
     // Start fetching IMMEDIATELY, don't wait for map
     enabled: regionsLayerActive,
-    // Keep data fresh for 5 minutes, don't refetch on window focus
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    // Boundaries never change — serve from cache forever
+    staleTime: Infinity,
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
     // Use localStorage cache as initial data for instant render
     initialData: () => {

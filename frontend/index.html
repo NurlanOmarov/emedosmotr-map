@@ -10,6 +10,15 @@
     <title>eMedosmotr Map</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api-maps.yandex.ru" />
+    <link rel="dns-prefetch" href="https://api-maps.yandex.ru" />
+    <script id="yandex-maps-script" src="https://api-maps.yandex.ru/2.1/?apikey=%VITE_YANDEX_MAPS_KEY%&lang=ru_RU" async></script>
+    <script>
+      // Pre-warm ymaps module system as soon as script loads, before React renders
+      document.getElementById('yandex-maps-script').addEventListener('load', function () {
+        window.ymaps && window.ymaps.ready(function () { window.__ymapsReady = true; });
+      });
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
       body { margin: 0; background: #0F172A; }
