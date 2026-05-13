@@ -646,6 +646,7 @@ export function RegionDetail() {
           onSave={(data) => {
             geoApi.updateRegion(selectedRegionId, data).then(() => {
               qc.invalidateQueries({ queryKey: ['region', selectedRegionId] });
+              qc.invalidateQueries({ queryKey: ['regions-geo'] });
               setIsEditingRegion(false);
             });
           }}
