@@ -267,6 +267,7 @@ export function LoginPage() {
             <Input
               id="username"
               type="text"
+              autoComplete="username"
               placeholder="Введите имя пользователя"
               $error={!!errors.username}
               {...register('username')}
@@ -290,6 +291,7 @@ export function LoginPage() {
             <Input
               id="password"
               type="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               $error={!!errors.password}
               {...register('password')}
