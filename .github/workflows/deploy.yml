@@ -72,6 +72,14 @@ jobs:
 
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
             docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+
+            # Seed geo data if regions table is empty
+            REGION_COUNT=$(docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d emedosmotr_map -tAc "SELECT COUNT(*) FROM regions;")
+            if [ "$REGION_COUNT" = "0" ]; then
+              echo "Seeding geo data..."
+              docker compose -f docker-compose.prod.yml exec -T backend sh -c 'PYTHONPATH=/app python scripts/seed_geo.py'
+            fi
+
             docker image prune -f
 
             # Reload nginx so it re-resolves backend IP after container rebuild
