@@ -254,9 +254,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     if (e.target === e.currentTarget) close(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') close(false);
-  };
+  useEscapeKey(() => {
+    if (state) close(false);
+  });
 
   const variant = state?.variant ?? 'danger';
 

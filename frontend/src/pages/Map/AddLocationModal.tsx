@@ -406,139 +406,202 @@ export function AddLocationModal({ onClose }: Props) {
         transition={{ type: 'spring', stiffness: 350, damping: 30 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <form onSubmit={(e) => { 
-          e.preventDefault(); 
-          if (step === 1) {
-            if (canProceedStep1) setStep(2);
-          } else {
-            handleSubmit();
-          }
-        }}>
+        <form 
+          onSubmit={(e) => { 
+            e.preventDefault(); 
+            if (step === 1) {
+              if (canProceedStep1) setStep(2);
+            } else {
+              handleSubmit();
+            }
+          }}
+          style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
+        >
           <ModalHeader>
             <ModalTitle>Добавить объект</ModalTitle>
             <CloseBtn type="button" onClick={onClose}>x</CloseBtn>
           </ModalHeader>
 
-          <StepIndicator>
-            <StepDot $active={step === 1} $done={step > 1}>1</StepDot>
-            <StepLabel $active={step === 1}>Место и тип</StepLabel>
-            <StepConnector />
-            <StepDot $active={step === 2} $done={false}>2</StepDot>
-            <StepLabel $active={step === 2}>Детали объекта</StepLabel>
-          </StepIndicator>
+        <StepIndicator>
+          <StepDot $active={step === 1} $done={step > 1}>1</StepDot>
+          <StepLabel $active={step === 1}>Место и тип</StepLabel>
+          <StepConnector />
+          <StepDot $active={step === 2} $done={false}>2</StepDot>
+          <StepLabel $active={step === 2}>Детали объекта</StepLabel>
+        </StepIndicator>
 
-          <Body>
-            {step === 1 && (
-              <>
-                <FormGroup>
-                  <Label>Область *</Label>
-                  <Select
-                    value={regionId}
-                    onChange={e => setRegionId(e.target.value === '' ? '' : Number(e.target.value))}
-                  >
-                    <option value="">Выберите область</option>
-                    {Array.isArray(regions) && regions.map((r: any) => (
-                      <option key={r.region_id} value={r.region_id}>{r.name}</option>
-                    ))}
-                  </Select>
-                </FormGroup>
+        <Body>
+          {step === 1 && (
+            <>
+              <FormGroup>
+                <Label>Область *</Label>
+                <Select
+                  value={regionId}
+                  onChange={e => setRegionId(e.target.value === '' ? '' : Number(e.target.value))}
+                >
+                  <option value="">Выберите область</option>
+                  {Array.isArray(regions) && regions.map((r: any) => (
+                    <option key={r.region_id} value={r.region_id}>{r.name}</option>
+                  ))}
+                </Select>
+              </FormGroup>
 
-                <FormGroup>
-                  <Label>Населённый пункт</Label>
-                  <Select
-                    value={settlementId}
-                    onChange={e => setSettlementId(e.target.value === '' ? '' : Number(e.target.value))}
-                    disabled={regionId === ''}
-                  >
-                    <option value="">Выберите нас. пункт (необязательно)</option>
-                    {Array.isArray(settlements) && settlements.map((s: any) => (
-                      <option key={s.settlement_id} value={s.settlement_id}>{s.name}</option>
-                    ))}
-                  </Select>
-                </FormGroup>
+              <FormGroup>
+                <Label>Населённый пункт</Label>
+                <Select
+                  value={settlementId}
+                  onChange={e => setSettlementId(e.target.value === '' ? '' : Number(e.target.value))}
+                  disabled={regionId === ''}
+                >
+                  <option value="">Выберите нас. пункт (необязательно)</option>
+                  {Array.isArray(settlements) && settlements.map((s: any) => (
+                    <option key={s.settlement_id} value={s.settlement_id}>{s.name}</option>
+                  ))}
+                </Select>
+              </FormGroup>
 
-                <FormGroup>
-                  <Label>Тип объекта *</Label>
-                  <TypeGrid>
-                    {TYPE_CONFIG.map((tc) => (
-                      <TypeCard
-                        key={tc.value}
-                        $active={locationType === tc.value}
-                        $color={tc.color}
-                        onClick={() => setLocationType(tc.value)}
-                        whileTap={{ scale: 0.97 }}
-                        type="button"
-                      >
-                        <TypeColorDot $color={tc.color} />
-                        <TypeCardLabel $active={locationType === tc.value} $color={tc.color}>
-                          {tc.label}
-                        </TypeCardLabel>
-                      </TypeCard>
-                    ))}
-                  </TypeGrid>
-                </FormGroup>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                {createMutation.isError && (
-                  <ErrorMsg>
-                    Ошибка при создании объекта. Проверьте данные и повторите.
-                  </ErrorMsg>
-                )}
-                {successMsg && <SuccessMsg>{successMsg}</SuccessMsg>}
-
-                <FormGroup>
-                  <Label>Название *</Label>
-                  <Input
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Военкомат г. Алматы"
-                    autoFocus
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <Label>Адрес</Label>
-                  <Input
-                    value={address}
-                    onChange={e => setAddress(e.target.value)}
-                    placeholder="ул. Примерная, 1"
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <Label>Координаты *</Label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Input
-                      value={coords}
-                      onChange={e => handleCoordsChange(e.target.value)}
-                      placeholder="43.302819, 77.239681"
-                      style={coordsError ? { borderColor: 'rgba(239,68,68,0.5)' } : undefined}
-                    />
-                    <Btn
-                      $variant="ghost"
+              <FormGroup>
+                <Label>Тип объекта *</Label>
+                <TypeGrid>
+                  {TYPE_CONFIG.map((tc) => (
+                    <TypeCard
+                      key={tc.value}
+                      $active={locationType === tc.value}
+                      $color={tc.color}
+                      onClick={() => setLocationType(tc.value)}
+                      whileTap={{ scale: 0.97 }}
                       type="button"
-                      onClick={() => setPickingLocation(true)}
-                      style={{ flex: '0 0 44px', padding: 0, fontSize: 18 }}
-                      title="Указать на карте"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                     >
+                      <TypeColorDot $color={tc.color} />
+                      <TypeCardLabel $active={locationType === tc.value} $color={tc.color}>
+                        {tc.label}
+                      </TypeCardLabel>
+                    </TypeCard>
+                  ))}
+                </TypeGrid>
+              </FormGroup>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              {createMutation.isError && (
+                <ErrorMsg>
+                  Ошибка при создании объекта. Проверьте данные и повторите.
+                </ErrorMsg>
+              )}
+              {successMsg && <SuccessMsg>{successMsg}</SuccessMsg>}
+
+              <FormGroup>
+                <Label>Название *</Label>
+                <Input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Военкомат г. Алматы"
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <Label>Адрес</Label>
+                <Input
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  placeholder="ул. Примерная, 1"
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <Label>Координаты *</Label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Input
+                    value={coords}
+                    onChange={e => handleCoordsChange(e.target.value)}
+                    placeholder="43.302819, 77.239681"
+                    style={coordsError ? { borderColor: 'rgba(239,68,68,0.5)' } : undefined}
+                  />
+                  <Btn
+                    $variant="ghost"
+                    type="button"
+                    onClick={() => setPickingLocation(true)}
+                    style={{ flex: '0 0 44px', padding: 0, fontSize: 18 }}
+                    title="Указать на карте"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    📍
+                  </Btn>
+                </div>
+                {coordsError
+                  ? <span style={{ fontSize: 11, color: '#F87171', marginTop: 4, display: 'block' }}>{coordsError}</span>
+                  : coords && parseCoords(coords) && (
+                    <span style={{ fontSize: 11, color: '#4ADE80', marginTop: 4, display: 'block' }}>
+                      ✓ Координаты приняты
+                    </span>
+                  )
+                }
+              </FormGroup>
+
+              <FormGroup>
+                <Label>Статус</Label>
+                <Select
+                  value={status}
+                  onChange={e => setStatus(e.target.value as StatusType)}
+                >
+                  {STATUS_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </Select>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>
+                  {locationType === 'military_office'
+                    ? 'Примечания по договору'
+                    : 'Примечания'}
+                </Label>
+                <Textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder={
+                    locationType === 'military_office'
+                      ? 'Информация о договоре с УМОБ...'
+                      : 'Дополнительная информация...'
+                  }
+                />
+              </FormGroup>
+            </>
+          )}
+        </Body>
+
+        <Footer>
+          {step === 1 ? (
+            <>
+              <Btn $variant="ghost" onClick={onClose} type="button">
+                Отмена
+              </Btn>
+              <Btn
+                $variant="primary"
+                disabled={!canProceedStep1}
+                type="submit"
+                whileTap={{ scale: 0.97 }}
+              >
+                Далее
+              </Btn>
+            </>
+          ) : (
+            <>
               <Btn $variant="ghost" onClick={() => setStep(1)} type="button">
                 Назад
               </Btn>
               <Btn
                 $variant="primary"
-                onClick={handleSubmit}
                 disabled={
                   !name.trim() ||
                   !parseCoords(coords) ||
                   regionId === '' ||
                   createMutation.isPending
                 }
-                type="button"
+                type="submit"
                 whileTap={{ scale: 0.97 }}
               >
                 {createMutation.isPending ? 'Сохранение...' : 'Сохранить'}
@@ -546,6 +609,7 @@ export function AddLocationModal({ onClose }: Props) {
             </>
           )}
         </Footer>
+        </form>
       </Modal>
     </Overlay>
   );

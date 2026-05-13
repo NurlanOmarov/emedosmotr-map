@@ -180,6 +180,7 @@ interface Props {
 }
 
 export function UserForm({ user, onClose, onSubmit, isSubmitting }: Props) {
+  useEscapeKey(onClose);
   const initialLocationType = user
     ? (user.region_id ? 'region' : 'aup')
     : 'region';
