@@ -879,8 +879,7 @@ export function MapPage() {
     queryFn: async () => {
       // Try localStorage cache first for instant display
       const cached = localStorage.getItem('regions-geo-cache');
-      const cacheTime = localStorage.getItem('regions-geo-cache-time');
-      const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 minutes
+
 
       // Fetch from API (will use Redis cache + ETag on server)
       try {
