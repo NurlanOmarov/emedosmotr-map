@@ -34,6 +34,10 @@ REGIONS = [
     {"name": "Улытауская область",             "code": "ulytau_region",            "file": "ulytau_region.geojson",            "center_lat": 48.0, "center_lon": 66.5},
     {"name": "Жетысуская область",             "code": "zhetysu_region",           "file": "zhetysu_region.geojson",           "center_lat": 45.0, "center_lon": 79.0},
     {"name": "Область Абай",                   "code": "abairjay_region",          "file": "abairjay_region.geojson",          "center_lat": 49.5, "center_lon": 80.5},
+    # Города республиканского значения
+    {"name": "Астана",   "code": "astana_region",   "file": "astana_city.geojson",   "center_lat": 51.1694, "center_lon": 71.4491},
+    {"name": "Алматы",   "code": "almaty_city",     "file": "almaty_city.geojson",   "center_lat": 43.2220, "center_lon": 76.8512},
+    {"name": "Шымкент",  "code": "shymkent_region", "file": "shymkent_city.geojson", "center_lat": 42.3000, "center_lon": 69.6000},
 ]
 
 
@@ -43,7 +47,7 @@ async def seed_geo() -> None:
 
     async with Session() as db:
         for r in REGIONS:
-            filepath = os.path.join(GEO_DATA_DIR, r["file"])
+            filepath = os.path.join(GEO_DATA_DIR, str(r["file"]))
             geometry = None
 
             if os.path.exists(filepath):
