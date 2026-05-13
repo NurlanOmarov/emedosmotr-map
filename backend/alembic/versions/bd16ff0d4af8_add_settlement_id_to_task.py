@@ -5,17 +5,16 @@ Revises: 23ff6f3764fe
 Create Date: 2026-05-06 15:13:08.993113
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+
+import sqlalchemy as sa
 
 from alembic import op
-import sqlalchemy as sa
-import geoalchemy2
-
 
 revision: str = 'bd16ff0d4af8'
-down_revision: Union[str, None] = '23ff6f3764fe'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '23ff6f3764fe'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

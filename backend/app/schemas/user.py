@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -10,9 +9,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     full_name: str | None = Field(None, max_length=200)
-    role: Literal[
-        "superadmin", "director", "regional_manager", "engineer", "operator", "analyst"
-    ]
+    role: str = Field(min_length=2, max_length=50)
     region_id: int | None = None
     phone: str | None = Field(None, max_length=20)
 

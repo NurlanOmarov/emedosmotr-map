@@ -1,5 +1,6 @@
 import httpx
 import structlog
+
 from app.config import settings
 
 log = structlog.get_logger()
@@ -37,7 +38,8 @@ class TelegramService:
             return False
 
     async def set_webhook(self, url: str):
-        if not self.is_configured(): return False
+        if not self.is_configured():
+            return False
         async with httpx.AsyncClient() as client:
             resp = await client.post(f"{self.api_url}/setWebhook", json={"url": url})
             return resp.status_code == 200

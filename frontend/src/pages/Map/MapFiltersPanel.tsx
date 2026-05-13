@@ -31,7 +31,7 @@ const Panel = styled(motion.div)`
     width: 100%;
     left: 0;
     top: auto;
-    bottom: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
     border-radius: 20px 20px 0 0;
     border-left: none;
     border-right: none;

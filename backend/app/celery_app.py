@@ -1,5 +1,12 @@
+import sentry_sdk
 from celery import Celery
 from app.config import settings
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment="production" if not settings.DEBUG else "development",
+    )
 
 celery_app = Celery(
     "emedosmotr_map",

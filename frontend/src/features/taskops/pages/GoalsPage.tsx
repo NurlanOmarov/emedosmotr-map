@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styled from 'styled-components';
+import { LuPlus, LuTarget, LuTrash2 } from 'react-icons/lu';
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from '../api';
 import type { TaskopsGoal } from '../types';
 
@@ -205,6 +206,21 @@ const CancelBtn = styled.button`
   cursor: pointer;
 `;
 
+const LoadMoreBtn = styled.button`
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid ${(p) => p.theme.colors.border};
+  background: ${(p) => p.theme.colors.bgCard};
+  color: ${(p) => p.theme.colors.textSecondary};
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover {
+    border-color: ${(p) => p.theme.colors.primary};
+    color: ${(p) => p.theme.colors.primary};
+  }
+`;
+
 const SaveBtn = styled.button`
   background: ${(p) => p.theme.colors.primary};
   color: white;
@@ -241,7 +257,10 @@ function ProgressRingIcon({ pct, done }: { pct: number; done: boolean }) {
 }
 
 export function GoalsPage() {
-  const { data: goals = [], isLoading } = useGoals();
+  const [limit, setLimit] = useState(20);
+  const { data, isLoading } = useGoals({ limit, offset: 0 });
+  const goals = data?.items || [];
+  const total = data?.total || 0;
   const createGoal = useCreateGoal();
   const deleteGoal = useDeleteGoal();
 
@@ -269,7 +288,9 @@ export function GoalsPage() {
     <Page>
       <TopBar>
         <PageTitle>Цели</PageTitle>
-        <NewBtn onClick={() => setShowCreate(true)}>+ Цель</NewBtn>
+        <NewBtn onClick={() => setShowCreate(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <LuPlus size={14} /> Цель
+        </NewBtn>
       </TopBar>
 
       {isLoading && (
@@ -278,7 +299,7 @@ export function GoalsPage() {
 
       {!isLoading && goals.length === 0 && (
         <EmptyState>
-          <span style={{ fontSize: 36 }}>🎯</span>
+        <LuTarget size={36} style={{ opacity: 0.3 }} />
           <span>Нет активных целей</span>
           <NewBtn onClick={() => setShowCreate(true)}>Создать первую цель</NewBtn>
         </EmptyState>
@@ -293,6 +314,14 @@ export function GoalsPage() {
           }}
         />
       ))}
+
+      {goals.length < total && (
+        <div style={{ padding: '16px', textAlign: 'center' }}>
+          <LoadMoreBtn onClick={() => setLimit(prev => prev + 20)}>
+            Загрузить ещё (показано {goals.length} из {total})
+          </LoadMoreBtn>
+        </div>
+      )}
 
       {showCreate && (
         <ModalOverlay onClick={(e) => e.target === e.currentTarget && setShowCreate(false)}>
@@ -361,7 +390,9 @@ function GoalItem({ goal, onDelete }: { goal: TaskopsGoal; onDelete: () => void 
         </GoalInfo>
         <GoalActions>
           <ActionBtn onClick={toggleDone}>{isDone ? 'Возобновить' : 'Выполнено'}</ActionBtn>
-          <DeleteBtn onClick={onDelete}>✕</DeleteBtn>
+          <DeleteBtn onClick={onDelete}>
+            <LuTrash2 size={12} />
+          </DeleteBtn>
         </GoalActions>
       </GoalHeader>
 

@@ -1,5 +1,6 @@
+
 from pywebpush import vapid_generate_keys
-import json
+
 
 def generate():
     keys = vapid_generate_keys()

@@ -1,35 +1,60 @@
-import uuid
+import os
 import re
-from datetime import datetime, timezone, date, timedelta
-from typing import Optional
+import shutil
+import uuid
+from datetime import UTC, date, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select, and_, or_, case
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
-from app.models.taskops import (
-    TaskopsProject, TaskopsProjectMember, TaskopsTask, TaskopsComment,
-    TaskopsDependency, TaskopsCycle, TaskopsLabel, TaskStatus, TaskopsGoal,
-    TaskopsAuditLog,
-)
-from app.services.notification import notification_service
-from app.models.user import User
 from app.models.location import Location
-from app.schemas.common import PaginatedResponse
-from app.modules.taskops.schemas import (
-    ProjectCreate, ProjectUpdate, ProjectResponse,
-    ProjectMemberAdd, ProjectMemberResponse,
-    TaskCreate, TaskUpdate, TaskResponse,
-    CommentCreate, CommentResponse,
-    DependencyCreate, DependencyResponse,
-    CycleCreate, CycleResponse,
-    GoalCreate, GoalUpdate, GoalResponse,
+from app.models.taskops import (
+    TaskopsAttachment,
+    TaskopsAuditLog,
+    TaskopsComment,
+    TaskopsCycle,
+    TaskopsDependency,
+    TaskopsGoal,
+    TaskopsLabel,
+    TaskopsNote,
+    TaskopsProject,
+    TaskopsProjectMember,
+    TaskopsTask,
+    TaskStatus,
 )
-from app.modules.taskops.permissions import get_accessible_project, can_manage_projects
+from app.models.user import User
+from app.modules.taskops.permissions import can_manage_projects, get_accessible_project
+from app.modules.taskops.schemas import (
+    AttachmentResponse,
+    CommentCreate,
+    CommentResponse,
+    CycleCreate,
+    CycleResponse,
+    DependencyCreate,
+    DependencyResponse,
+    GoalCreate,
+    GoalResponse,
+    GoalUpdate,
+    NoteCreate,
+    NoteResponse,
+    NoteUpdate,
+    ProjectCreate,
+    ProjectMemberAdd,
+    ProjectMemberResponse,
+    ProjectResponse,
+    ProjectUpdate,
+    TaskCreate,
+    TaskResponse,
+    TaskUpdate,
+)
 from app.modules.ws.manager import ws_manager
+from app.schemas.common import PaginatedResponse
+from app.services.notification import notification_service
 
 router = APIRouter(prefix="/v1/taskops", tags=["TaskOps"])
 
@@ -125,6 +150,26 @@ async def _broadcast_task(event: str, task: TaskopsTask, project_id: str | None 
     )
 
 
+# ─── Assignable Users ────────────────────────────────────────────────────────
+
+@router.get("/assignable-users")
+async def list_assignable_users(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns users that can be assigned to tasks. Available to all authenticated users."""
+    q = select(User.id, User.full_name, User.username, User.role).where(
+        User.deleted_at.is_(None),
+        User.role.not_in(["external_dev"]),
+    )
+    result = await db.execute(q.order_by(User.full_name))
+    rows = result.all()
+    return [
+        {"id": str(r.id), "full_name": r.full_name or r.username, "role": r.role}
+        for r in rows
+    ]
+
+
 # ─── Projects ────────────────────────────────────────────────────────────────
 
 @router.get("/projects", response_model=list[ProjectResponse])
@@ -211,7 +256,7 @@ async def delete_project(
     project = await get_accessible_project(project_id, current_user, db, require_write=True)
     if current_user.role not in {"superadmin", "director"} and project.owner_id != current_user.id:
         raise HTTPException(403, "Only owner or admin can delete project")
-    project.deleted_at = datetime.now(timezone.utc)
+    project.deleted_at = datetime.now(UTC)
     await db.commit()
 
 
@@ -296,18 +341,62 @@ def _build_task_response(task: TaskopsTask, assignee_name=None, reporter_name=No
     data["assignee_name"] = assignee_name
     data["reporter_name"] = reporter_name
     data["location_name"] = location_name
-    data["labels"] = [{"id": l.id, "name": l.name, "color": l.color} for l in task.labels]
+    data["labels"] = [{"id": lbl.id, "name": lbl.name, "color": lbl.color} for lbl in task.labels]
+    data["attachments"] = [
+        {
+            "id": a.id,
+            "task_id": a.task_id,
+            "filename": a.filename,
+            "content_type": a.content_type,
+            "file_size": a.file_size,
+            "created_at": a.created_at,
+        }
+        for a in getattr(task, "attachments", [])
+    ]
+    
+    # Hierarchical data
+    subtasks = getattr(task, "subtasks", [])
+    data["subtask_count"] = len(subtasks)
+    data["completed_subtask_count"] = sum(1 for s in subtasks if s.status == TaskStatus.done)
+    data["comment_count"] = len(getattr(task, "comments", []))
+    
+    # Dependencies
+    data["dependencies_incoming"] = [
+        {
+            "id": d.id, 
+            "source_task_id": d.source_task_id, 
+            "target_task_id": d.target_task_id, 
+            "type": d.type, 
+            "created_at": d.created_at,
+            "source_task_title": d.source_task.title if d.source_task else None,
+            "target_task_title": d.target_task.title if d.target_task else None,
+        }
+        for d in getattr(task, "dependencies_incoming", [])
+    ]
+    data["dependencies_outgoing"] = [
+        {
+            "id": d.id, 
+            "source_task_id": d.source_task_id, 
+            "target_task_id": d.target_task_id, 
+            "type": d.type, 
+            "created_at": d.created_at,
+            "source_task_title": d.source_task.title if d.source_task else None,
+            "target_task_title": d.target_task.title if d.target_task else None,
+        }
+        for d in getattr(task, "dependencies_outgoing", [])
+    ]
+    
     return TaskResponse(**data)
 
 
 @router.get("/projects/{project_id}/tasks", response_model=PaginatedResponse[TaskResponse])
 async def list_tasks(
     project_id: uuid.UUID,
-    task_status: Optional[str] = Query(None, alias="status"),
-    priority: Optional[str] = Query(None),
-    assignee_id: Optional[uuid.UUID] = Query(None),
-    cycle_id: Optional[uuid.UUID] = Query(None),
-    q: Optional[str] = Query(None),
+    task_status: str | None = Query(None, alias="status"),
+    priority: str | None = Query(None),
+    assignee_id: uuid.UUID | None = Query(None),
+    cycle_id: uuid.UUID | None = Query(None),
+    q: str | None = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
@@ -315,12 +404,16 @@ async def list_tasks(
 ):
     await get_accessible_project(project_id, current_user, db)
 
-    assignee_alias = User.__table__.alias("assignee_u")
-    reporter_alias = User.__table__.alias("reporter_u")
-
     query = (
         select(TaskopsTask)
-        .options(selectinload(TaskopsTask.labels))
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
         .where(TaskopsTask.project_id == project_id, TaskopsTask.deleted_at.is_(None))
     )
 
@@ -405,7 +498,16 @@ async def create_task(
 
     # Reload with labels
     result = await db.execute(
-        select(TaskopsTask).options(selectinload(TaskopsTask.labels)).where(TaskopsTask.id == task.id)
+        select(TaskopsTask)
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
+        .where(TaskopsTask.id == task.id)
     )
     task = result.scalar_one()
 
@@ -425,7 +527,14 @@ async def get_task(
 ):
     result = await db.execute(
         select(TaskopsTask)
-        .options(selectinload(TaskopsTask.labels))
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
         .where(TaskopsTask.id == task_id, TaskopsTask.deleted_at.is_(None))
     )
     task = result.scalar_one_or_none()
@@ -440,6 +549,51 @@ async def get_task(
     return _build_task_response(task)
 
 
+@router.get("/tasks/{task_id}/subtasks", response_model=list[TaskResponse])
+async def get_subtasks(
+    task_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Verify access to parent task
+    result = await db.execute(
+        select(TaskopsTask).where(TaskopsTask.id == task_id, TaskopsTask.deleted_at.is_(None))
+    )
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    await get_accessible_project(task.project_id, current_user, db)
+
+    # Fetch subtasks
+    result = await db.execute(
+        select(TaskopsTask)
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
+        .where(TaskopsTask.parent_task_id == task_id, TaskopsTask.deleted_at.is_(None))
+        .order_by(TaskopsTask.position, TaskopsTask.created_at)
+    )
+    subtasks = result.scalars().all()
+    
+    # Enrich with names
+    user_ids = {t.assignee_id for t in subtasks if t.assignee_id} | {t.reporter_id for t in subtasks}
+    users_map: dict = {}
+    if user_ids:
+        ur = await db.execute(select(User.id, User.full_name).where(User.id.in_(user_ids)))
+        users_map = {row.id: row.full_name for row in ur.all()}
+
+    return [
+        _build_task_response(t, assignee_name=users_map.get(t.assignee_id), reporter_name=users_map.get(t.reporter_id))
+        for t in subtasks
+    ]
+
+
 @router.patch("/tasks/{task_id}", response_model=TaskResponse)
 async def update_task(
     task_id: uuid.UUID,
@@ -449,7 +603,14 @@ async def update_task(
 ):
     result = await db.execute(
         select(TaskopsTask)
-        .options(selectinload(TaskopsTask.labels))
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
         .where(TaskopsTask.id == task_id, TaskopsTask.deleted_at.is_(None))
     )
     task = result.scalar_one_or_none()
@@ -466,7 +627,7 @@ async def update_task(
     # Auto-set completed_at
     if "status" in data:
         if data["status"] == TaskStatus.done and not task.completed_at:
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
         elif data["status"] != TaskStatus.done:
             task.completed_at = None
 
@@ -491,7 +652,16 @@ async def update_task(
     await db.refresh(task)
 
     result = await db.execute(
-        select(TaskopsTask).options(selectinload(TaskopsTask.labels)).where(TaskopsTask.id == task.id)
+        select(TaskopsTask)
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
+        .where(TaskopsTask.id == task.id)
     )
     task = result.scalar_one()
     await _broadcast_task("taskops:task:updated", task)
@@ -512,7 +682,7 @@ async def delete_task(
     if not can_manage_projects(current_user):
         raise HTTPException(403, "Insufficient permissions to delete tasks")
     project_id = str(task.project_id)
-    task.deleted_at = datetime.now(timezone.utc)
+    task.deleted_at = datetime.now(UTC)
     await db.commit()
     await ws_manager.broadcast_to_rooms(
         ["taskops_global", f"taskops_project_{project_id}"],
@@ -627,22 +797,134 @@ async def remove_dependency(
 
 # ─── Inbox (My Tasks) ────────────────────────────────────────────────────────
 
-@router.get("/me/inbox", response_model=list[TaskResponse])
+@router.get("/me/inbox", response_model=dict)
 async def my_inbox(
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    base_stmt = select(TaskopsTask).where(
+        TaskopsTask.assignee_id == current_user.id,
+        TaskopsTask.deleted_at.is_(None),
+        TaskopsTask.status.not_in([TaskStatus.done, TaskStatus.cancelled]),
+    )
+    
+    total_result = await db.execute(select(func.count()).select_from(base_stmt.subquery()))
+    total = total_result.scalar() or 0
+
     result = await db.execute(
-        select(TaskopsTask)
-        .options(selectinload(TaskopsTask.labels))
-        .where(
-            TaskopsTask.assignee_id == current_user.id,
-            TaskopsTask.deleted_at.is_(None),
-            TaskopsTask.status.not_in([TaskStatus.done, TaskStatus.cancelled]),
+        base_stmt
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
         )
         .order_by(TaskopsTask.due_date.asc().nulls_last(), TaskopsTask.priority)
+        .limit(limit)
+        .offset(offset)
     )
     tasks = result.scalars().all()
+    return {
+        "items": [_build_task_response(t) for t in tasks],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@router.get("/me/assigned", response_model=list[TaskResponse])
+async def my_assigned(
+    include_done: bool = Query(False),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tasks created by the current user and assigned to someone else."""
+    query = (
+        select(TaskopsTask)
+        .options(
+            selectinload(TaskopsTask.labels),
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
+        .where(
+            TaskopsTask.reporter_id == current_user.id,
+            TaskopsTask.deleted_at.is_(None),
+        )
+    )
+    if not include_done:
+        query = query.where(TaskopsTask.status.not_in([TaskStatus.done, TaskStatus.cancelled]))
+    query = query.order_by(TaskopsTask.due_date.asc().nulls_last(), TaskopsTask.created_at.desc())
+    result = await db.execute(query)
+    tasks = result.scalars().all()
+
+    user_ids = {t.assignee_id for t in tasks if t.assignee_id}
+    users_map: dict = {}
+    if user_ids:
+        ur = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users_map = {u.id: u.full_name for u in ur.scalars()}
+
+    return [_build_task_response(t, assignee_name=users_map.get(t.assignee_id)) for t in tasks]
+
+
+# ─── User Task Load (for managers) ───────────────────────────────────────────
+
+@router.get("/users/{user_id}/tasks", response_model=list[TaskResponse])
+async def get_user_tasks(
+    user_id: uuid.UUID,
+    include_done: bool = Query(False),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns all tasks assigned to a specific user. Accessible to managers and admins."""
+    if current_user.role == "external_dev":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    query = (
+        select(TaskopsTask)
+        .options(
+            selectinload(TaskopsTask.labels), 
+            selectinload(TaskopsTask.attachments),
+            selectinload(TaskopsTask.subtasks),
+            selectinload(TaskopsTask.comments),
+            selectinload(TaskopsTask.dependencies_incoming),
+            selectinload(TaskopsTask.dependencies_outgoing),
+        )
+        .where(
+            TaskopsTask.assignee_id == user_id,
+            TaskopsTask.deleted_at.is_(None),
+        )
+    )
+    if not include_done:
+        query = query.where(TaskopsTask.status.not_in([TaskStatus.done, TaskStatus.cancelled]))
+
+    query = query.order_by(TaskopsTask.due_date.asc().nulls_last(), TaskopsTask.priority)
+    result = await db.execute(query)
+    tasks = result.scalars().all()
+
+    # Enrich with project names
+    project_ids = {t.project_id for t in tasks}
+    projects_map: dict = {}
+    if project_ids:
+        pr = await db.execute(
+            select(TaskopsProject.id, TaskopsProject.name).where(TaskopsProject.id.in_(project_ids))
+        )
+        projects_map = {row.id: row.name for row in pr.all()}
+
+    def build(t: TaskopsTask) -> TaskResponse:
+        resp = _build_task_response(t)
+        # Embed project name in location_name slot for display convenience
+        # Use a custom extra field instead
+        data = resp.model_dump()
+        data["project_name"] = projects_map.get(t.project_id, "")
+        return TaskResponse(**{k: v for k, v in data.items() if k in TaskResponse.model_fields})
+
     return [_build_task_response(t) for t in tasks]
 
 
@@ -715,23 +997,42 @@ async def close_cycle(
 
 # ─── Goals ───────────────────────────────────────────────────────────────────
 
-@router.get("/goals", response_model=list[GoalResponse])
+@router.get("/goals", response_model=dict)
 async def list_goals(
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    sort_by: str = Query("created_at"),
+    order: str = Query("desc"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     q = select(TaskopsGoal, User.full_name.label("owner_name")).join(User, TaskopsGoal.owner_id == User.id)
     if current_user.role not in {"superadmin", "director"}:
         q = q.where(TaskopsGoal.owner_id == current_user.id)
-    result = await db.execute(q.order_by(TaskopsGoal.created_at.desc()))
+    
+    total_result = await db.execute(select(func.count()).select_from(q.subquery()))
+    total = total_result.scalar() or 0
+
+    sort_col = getattr(TaskopsGoal, sort_by, TaskopsGoal.created_at)
+    if order == "desc":
+        q = q.order_by(sort_col.desc())
+    else:
+        q = q.order_by(sort_col.asc())
+
+    result = await db.execute(q.limit(limit).offset(offset))
     rows = result.all()
-    out = []
+    items = []
     for row in rows:
         g = row.TaskopsGoal
         data = {c.name: getattr(g, c.name) for c in g.__table__.columns}
         data["owner_name"] = row.owner_name
-        out.append(GoalResponse(**data))
-    return out
+        items.append(GoalResponse(**data))
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.post("/goals", response_model=GoalResponse, status_code=201)
@@ -795,6 +1096,8 @@ async def delete_goal(
 
 @router.get("/dashboard")
 async def get_dashboard(
+    by_assignee_limit: int = Query(10, le=100),
+    risk_tasks_limit: int = Query(10, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -845,9 +1148,10 @@ async def get_dashboard(
     kpi = kpi_result.one()
 
     eight_weeks_ago = today - timedelta(weeks=8)
+    week_expr = func.to_char(TaskopsTask.completed_at, 'IYYY-IW')
     done_by_week_result = await db.execute(
         select(
-            func.to_char(TaskopsTask.completed_at, 'IYYY-IW').label("week"),
+            week_expr.label("week"),
             func.count().label("count"),
         )
         .where(
@@ -855,8 +1159,8 @@ async def get_dashboard(
             TaskopsTask.status == TaskStatus.done,
             TaskopsTask.completed_at >= eight_weeks_ago,
         )
-        .group_by(func.to_char(TaskopsTask.completed_at, 'IYYY-IW'))
-        .order_by(func.to_char(TaskopsTask.completed_at, 'IYYY-IW'))
+        .group_by(week_expr)
+        .order_by(week_expr)
     )
     done_by_week = [{"week": r.week, "count": r.count} for r in done_by_week_result.all()]
 
@@ -865,11 +1169,12 @@ async def get_dashboard(
             User.full_name.label("name"),
             func.count().label("count"),
         )
+        .select_from(TaskopsTask)
         .join(User, TaskopsTask.assignee_id == User.id)
         .where(base, TaskopsTask.status.not_in([TaskStatus.done, TaskStatus.cancelled]))
         .group_by(User.full_name)
         .order_by(func.count().desc())
-        .limit(10)
+        .limit(by_assignee_limit)
     )
     by_assignee = [{"name": r.name or "—", "count": r.count} for r in assignee_result.all()]
 
@@ -888,7 +1193,7 @@ async def get_dashboard(
             ),
         )
         .order_by(TaskopsTask.due_date.asc().nulls_last())
-        .limit(10)
+        .limit(risk_tasks_limit)
     )
     risk_tasks = [_build_task_response(t) for t in risk_result.scalars().all()]
 
@@ -910,19 +1215,25 @@ async def get_dashboard(
 
 @router.get("/audit-log")
 async def get_audit_log(
-    project_id: Optional[uuid.UUID] = Query(None),
+    project_id: uuid.UUID | None = Query(None),
     limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if current_user.role not in {"superadmin", "director", "analyst", "regional_manager"}:
         raise HTTPException(403, "Insufficient permissions")
-    q = select(TaskopsAuditLog).order_by(TaskopsAuditLog.created_at.desc()).limit(limit)
+
+    base_q = select(TaskopsAuditLog)
     if project_id:
-        q = q.where(TaskopsAuditLog.project_id == project_id)
-    result = await db.execute(q)
+        base_q = base_q.where(TaskopsAuditLog.project_id == project_id)
+
+    total_result = await db.execute(select(func.count()).select_from(base_q.subquery()))
+    total = total_result.scalar() or 0
+
+    result = await db.execute(base_q.order_by(TaskopsAuditLog.created_at.desc()).limit(limit).offset(offset))
     rows = result.scalars().all()
-    return [
+    items = [
         {
             "id": str(r.id),
             "user_name": r.user_name,
@@ -936,6 +1247,12 @@ async def get_audit_log(
         }
         for r in rows
     ]
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 # ─── Mention search ───────────────────────────────────────────────────────────
@@ -1054,3 +1371,193 @@ async def apply_template(
     await _audit(db, current_user, "template_applied", "project", project_id, tpl["name"], project_id, template_id)
     await db.commit()
     return {"created": len(created), "template": tpl["name"]}
+
+# ─── Attachments ─────────────────────────────────────────────────────────────
+
+@router.post("/tasks/{task_id}/attachments", response_model=AttachmentResponse, status_code=201)
+async def upload_attachment(
+    task_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(TaskopsTask).where(TaskopsTask.id == task_id, TaskopsTask.deleted_at.is_(None)))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(404, "Task not found")
+    
+    await get_accessible_project(task.project_id, current_user, db, require_write=True)
+
+    # Validate file size
+    from app.config import settings
+    content = await file.read()
+    if len(content) > settings.MAX_FILE_SIZE_MB * 1024 * 1024:
+        raise HTTPException(413, f"File too large. Max size is {settings.MAX_FILE_SIZE_MB}MB")
+    await file.seek(0)
+
+    # Create directory
+    upload_dir = os.path.join("uploads", "taskops", str(task.project_id))
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Save file
+    safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in (file.filename or "file")])
+    unique_filename = f"{uuid.uuid4().hex}_{safe_filename}"
+    file_path = os.path.join(upload_dir, unique_filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    attachment = TaskopsAttachment(
+        task_id=task_id,
+        user_id=current_user.id,
+        filename=file.filename,
+        file_path=file_path,
+        content_type=file.content_type,
+        file_size=len(content),
+    )
+    db.add(attachment)
+    await db.commit()
+    await db.refresh(attachment)
+
+    await _audit(db, current_user, "attachment_uploaded", "task", task.id, task.title, task.project_id, f"file={file.filename}")
+    await _broadcast_task("taskops:task:updated", task)
+    
+    return attachment
+
+
+@router.get("/attachments/{attachment_id}")
+async def get_attachment(
+    attachment_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(TaskopsAttachment).where(TaskopsAttachment.id == attachment_id)
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise HTTPException(404, "Attachment not found")
+
+    # Check access to task
+    task_result = await db.execute(select(TaskopsTask).where(TaskopsTask.id == attachment.task_id))
+    task = task_result.scalar_one()
+    await get_accessible_project(task.project_id, current_user, db)
+
+    if not os.path.exists(attachment.file_path):
+        raise HTTPException(404, "File not found on disk")
+
+    return FileResponse(
+        attachment.file_path,
+        media_type=attachment.content_type,
+        filename=attachment.filename
+    )
+
+
+@router.delete("/attachments/{attachment_id}", status_code=204)
+async def delete_attachment(
+    attachment_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(TaskopsAttachment).where(TaskopsAttachment.id == attachment_id)
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise HTTPException(404, "Attachment not found")
+
+    # Check access to task
+    task_result = await db.execute(select(TaskopsTask).where(TaskopsTask.id == attachment.task_id))
+    task = task_result.scalar_one()
+    await get_accessible_project(task.project_id, current_user, db, require_write=True)
+
+    if current_user.role == "external_dev" and attachment.user_id != current_user.id:
+        raise HTTPException(403, "Access denied")
+
+    # Delete physical file
+    if os.path.exists(attachment.file_path):
+        os.remove(attachment.file_path)
+
+    await db.delete(attachment)
+    await db.commit()
+    
+    await _audit(db, current_user, "attachment_deleted", "task", task.id, task.title, task.project_id, f"file={attachment.filename}")
+    await _broadcast_task("taskops:task:updated", task)
+
+
+# ─── Notes (private per-user) ─────────────────────────────────────────────────
+
+@router.get("/notes", response_model=dict)
+async def list_notes(
+    q: str = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(TaskopsNote).where(TaskopsNote.user_id == current_user.id, TaskopsNote.deleted_at.is_(None))
+    if q:
+        pattern = f"%{q}%"
+        stmt = stmt.where(or_(TaskopsNote.title.ilike(pattern), TaskopsNote.content.ilike(pattern)))
+    
+    result = await db.execute(
+        stmt.order_by(TaskopsNote.is_pinned.desc(), TaskopsNote.updated_at.desc())
+    )
+    notes = result.scalars().all()
+    return {"items": notes}
+
+
+@router.post("/notes", response_model=NoteResponse, status_code=201)
+async def create_note(
+    body: NoteCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    note = TaskopsNote(user_id=current_user.id, **body.model_dump())
+    db.add(note)
+    await db.commit()
+    await db.refresh(note)
+    return note
+
+
+@router.patch("/notes/{note_id}", response_model=NoteResponse)
+async def update_note(
+    note_id: uuid.UUID,
+    body: NoteUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(TaskopsNote).where(
+            TaskopsNote.id == note_id,
+            TaskopsNote.user_id == current_user.id,
+            TaskopsNote.deleted_at.is_(None),
+        )
+    )
+    note = result.scalar_one_or_none()
+    if not note:
+        raise HTTPException(404, "Note not found")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(note, k, v)
+    note.updated_at = datetime.now(UTC)
+    await db.commit()
+    await db.refresh(note)
+    return note
+
+
+@router.delete("/notes/{note_id}", status_code=204)
+async def delete_note(
+    note_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(TaskopsNote).where(
+            TaskopsNote.id == note_id,
+            TaskopsNote.user_id == current_user.id,
+            TaskopsNote.deleted_at.is_(None),
+        )
+    )
+    note = result.scalar_one_or_none()
+    if not note:
+        raise HTTPException(404, "Note not found")
+    note.deleted_at = datetime.now(UTC)
+    await db.commit()

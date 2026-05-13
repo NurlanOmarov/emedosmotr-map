@@ -50,8 +50,12 @@ export interface TaskopsTask {
   reporter_name: string | null;
   location_name: string | null;
   labels: TaskopsLabel[];
+  attachments?: TaskopsAttachment[];
   subtask_count?: number;
+  completed_subtask_count?: number;
   comment_count?: number;
+  dependencies_incoming?: TaskopsDependency[];
+  dependencies_outgoing?: TaskopsDependency[];
 }
 
 export interface TaskopsComment {
@@ -90,6 +94,8 @@ export interface TaskopsDependency {
   target_task_id: string;
   type: TaskopsDependencyType;
   created_at: string;
+  source_task_title?: string;
+  target_task_title?: string;
 }
 
 export interface TaskopsGoal {
@@ -115,6 +121,25 @@ export interface TaskopsDashboard {
   done_by_week: { week: string; count: number }[];
   by_assignee: { name: string; count: number }[];
   risk_tasks: TaskopsTask[];
+}
+
+export interface TaskopsAttachment {
+  id: string;
+  task_id: string;
+  filename: string;
+  content_type: string | null;
+  file_size: number | null;
+  created_at: string;
+}
+
+export interface TaskopsNote {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string | null;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Status display helpers

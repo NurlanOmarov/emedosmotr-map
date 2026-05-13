@@ -1,12 +1,17 @@
 import uuid
-from datetime import datetime, timezone
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.notification import Notification
 from app.models.user import User
 from app.modules.ws.manager import ws_manager
 from app.schemas.notification import NotificationType
-from app.tasks_celery.notifications import send_push_notifications_task, send_telegram_notification_task
-from sqlalchemy import select
+from app.tasks_celery.notifications import (
+    send_push_notifications_task,
+    send_telegram_notification_task,
+)
+
 
 class NotificationService:
     @staticmethod
@@ -39,10 +44,12 @@ class NotificationService:
         
         # Default settings if user not found or settings missing
         settings = getattr(user, 'notification_settings', {}) if user else {}
-        if isinstance(settings, str): # Handle if it's still stored as string
+        if isinstance(settings, str):
             import json
-            try: settings = json.loads(settings)
-            except: settings = {}
+            try:
+                settings = json.loads(settings)
+            except Exception:
+                settings = {}
 
         # 3. Broadcast via WebSocket (In-App)
         # Always send in-app unless explicitly disabled (if we had that option)

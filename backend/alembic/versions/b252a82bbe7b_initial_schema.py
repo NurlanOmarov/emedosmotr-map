@@ -5,17 +5,17 @@ Revises:
 Create Date: 2026-05-05 15:58:48.618630
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-import geoalchemy2
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 revision: str = 'b252a82bbe7b'
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

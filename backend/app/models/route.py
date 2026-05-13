@@ -1,6 +1,8 @@
-from sqlalchemy import Column, String, Float, JSON, DateTime, Integer, Index
+from sqlalchemy import JSON, Column, DateTime, Float, Index, Integer, String
 from sqlalchemy.sql import func
+
 from app.database import Base
+
 
 class RouteCache(Base):
     __tablename__ = "route_cache"

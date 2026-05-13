@@ -1,13 +1,28 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { authApi, telegramApi } from '@/services/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { Link } from 'react-router-dom';
-import { useNotificationStore } from '@/features/notifications/useNotificationStore';
 import { useThemeStore } from '@/styles/useThemeStore';
+import { useNotificationStore } from '@/features/notifications/useNotificationStore';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
+import {
+  LuMap,
+  LuLayoutDashboard, 
+  LuClipboardList, 
+  LuBriefcase, 
+  LuKey, 
+  LuUsers, 
+  LuShieldCheck,
+  LuMoon,
+  LuSun,
+  LuSearch,
+  LuBell,
+  LuBot,
+  LuSettings,
+  LuLogOut
+} from 'react-icons/lu';
+import { authApi, telegramApi } from '@/services/api';
 
 const Bar = styled(motion.header)`
   height: 56px;
@@ -39,19 +54,6 @@ const Brand = styled(NavLink)`
   text-decoration: none;
 `;
 
-const BrandIcon = styled.div`
-  width: 34px;
-  height: 34px;
-  background: linear-gradient(135deg, #1E3A5F, #2563EB);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  border: 1px solid rgba(59,130,246,0.3);
-  box-shadow: 0 0 16px rgba(37,99,235,0.3);
-`;
-
 const BrandName = styled.span`
   font-weight: 700;
   font-size: 14px;
@@ -67,6 +69,10 @@ const Nav = styled.nav`
   align-items: center;
   gap: 2px;
   flex: 1;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const NavItem = styled(NavLink)`
@@ -91,11 +97,9 @@ const NavItem = styled(NavLink)`
     color: ${({ theme }) => theme.colors.primary};
     background: ${({ theme }) => theme.colors.primaryGlow};
     border: 1px solid ${({ theme }) => theme.colors.primaryGlow};
-  }
-
-  span:last-child {
-    @media (max-width: 768px) {
-      display: none;
+    
+    svg {
+      filter: drop-shadow(0 0 5px ${({ theme }) => theme.colors.primary}40);
     }
   }
 
@@ -110,6 +114,10 @@ const Right = styled.div`
   align-items: center;
   gap: 12px;
   margin-left: auto;
+
+  @media (max-width: 640px) {
+    gap: 8px;
+  }
 `;
 
 const UserButton = styled(motion.button)`
@@ -236,14 +244,14 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const NAV_ITEMS = [
-  { to: '/map', icon: '/icons/map.png', label: 'Карта' },
-  { to: '/dashboard', icon: '/icons/analytics.png', label: 'Аналитика', roles: ['admin', 'superadmin', 'director', 'regional_manager', 'analyst'] },
-  { to: '/tasks', icon: '/icons/tasks.png', label: 'Задачи' },
-  { to: '/taskops', icon: '📋', label: 'Проекты' },
-  { to: '/district-accounts', icon: '🔑', label: 'Учетки', roles: ['admin', 'superadmin', 'director', 'regional_manager'] },
-  { to: '/admin', icon: '⚙️', label: 'Управление', roles: ['admin', 'superadmin'] },
+  { to: '/map', icon: LuMap, label: 'Карта' },
+  { to: '/dashboard', icon: LuLayoutDashboard, label: 'Аналитика', roles: ['admin', 'superadmin', 'director', 'regional_manager', 'analyst'] },
+  { to: '/tasks', icon: LuClipboardList, label: 'Задачи' },
+  { to: '/taskops', icon: LuBriefcase, label: 'Проекты' },
+  { to: '/district-accounts', icon: LuKey, label: 'Учетки', roles: ['admin', 'superadmin', 'director', 'regional_manager'] },
+  { to: '/admin/users', icon: LuUsers, label: 'Пользователи', roles: ['admin', 'superadmin'] },
+  { to: '/admin/roles', icon: LuShieldCheck, label: 'Роли', roles: ['admin', 'superadmin'] },
 ];
-
 
 const SearchButton = styled(motion.button)`
   display: flex;
@@ -290,12 +298,10 @@ const NavIcon = styled.span`
   justify-content: center;
   flex-shrink: 0;
   
-  img {
-    width: 130%;
-    height: 130%;
-    object-fit: contain;
-    mask-image: radial-gradient(circle, black 50%, transparent 90%);
-    -webkit-mask-image: radial-gradient(circle, black 50%, transparent 90%);
+  svg {
+    width: 100%;
+    height: 100%;
+    stroke-width: 2;
   }
 `;
 
@@ -331,7 +337,7 @@ export function Header() {
     >
       <Brand to="/map">
         <NavIcon>
-          <img src="/icons/map.png" alt="Map" />
+          <LuMap />
         </NavIcon>
         <BrandName>eMap</BrandName>
       </Brand>
@@ -341,14 +347,11 @@ export function Header() {
           const to = item.to === '/district-accounts' && selectedSettlementId
             ? `/district-accounts?settlement_id=${selectedSettlementId}`
             : item.to;
+          const Icon = item.icon;
           return (
             <NavItem key={item.to} to={to}>
               <NavIcon>
-                {item.icon.startsWith('/') ? (
-                  <img src={item.icon} alt={item.label} />
-                ) : (
-                  item.icon
-                )}
+                <Icon />
               </NavIcon>
               <span>{item.label}</span>
             </NavItem>
@@ -364,14 +367,14 @@ export function Header() {
           whileTap={{ scale: 0.9 }}
           title={themeMode === 'light' ? 'Переключить на темную тему' : 'Переключить на светлую тему'}
         >
-          <NavIcon>{themeMode === 'light' ? '🌙' : '☀️'}</NavIcon>
+          <NavIcon>{themeMode === 'light' ? <LuMoon /> : <LuSun />}</NavIcon>
         </ThemeToggle>
 
         <SearchButton
           onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k', bubbles: true }))}
           whileTap={{ scale: 0.97 }}
         >
-          <NavIcon>🔍</NavIcon>
+          <NavIcon><LuSearch /></NavIcon>
           <span>Поиск</span>
           <SearchKbd>Ctrl+K</SearchKbd>
         </SearchButton>
@@ -380,7 +383,7 @@ export function Header() {
           onClick={toggleDrawer}
           whileTap={{ scale: 0.9 }}
         >
-          <NavIcon>🔔</NavIcon>
+          <NavIcon><LuBell /></NavIcon>
           <AnimatePresence>
             {unreadCount > 0 && (
               <Badge
@@ -428,9 +431,23 @@ export function Header() {
                     window.open(`https://t.me/${botUsername}?start=bind_${data.code}`, '_blank');
                     setShowMenu(false);
                   }}>
-                    <span>🤖</span> Привязать Telegram
+                    <LuBot size={16} /> Привязать Telegram
                   </DropItem>
                 )}
+                {visibleNav.filter(item => !['/map', '/dashboard', '/tasks', '/taskops'].includes(item.to)).map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <DropItem
+                      key={item.to}
+                      as={Link}
+                      to={item.to}
+                      onClick={() => setShowMenu(false)}
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Icon size={16} /> {item.label}
+                    </DropItem>
+                  );
+                })}
                 {(user?.role === 'admin' || user?.role === 'superadmin') && (
                   <DropItem
                     as={Link}
@@ -438,11 +455,11 @@ export function Header() {
                     onClick={() => setShowMenu(false)}
                     style={{ textDecoration: 'none' }}
                   >
-                    <span>⚙️</span> Настройки
+                    <LuSettings size={16} /> Настройки
                   </DropItem>
                 )}
                 <DropItem className="danger" onClick={handleLogout}>
-                  <span>🚪</span> Выйти
+                  <LuLogOut size={16} /> Выйти
                 </DropItem>
               </Dropdown>
             </>

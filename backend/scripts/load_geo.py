@@ -5,8 +5,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import settings
 from app.models.geo import Region
@@ -44,7 +44,7 @@ async def load_geo():
                 print(f"  [!] File not found: {filepath}")
                 continue
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding='utf-8') as f:
                 geo_data = json.load(f)
             
             # Extract polygon if it's a FeatureCollection or Feature
@@ -61,7 +61,7 @@ async def load_geo():
                 print(f"  [!] No geometry found in {filename}")
                 continue
 
-            result = await db.execute(
+            await db.execute(
                 update(Region)
                 .where(Region.code == code)
                 .values(geometry_json=geometry)

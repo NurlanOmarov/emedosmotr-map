@@ -8,6 +8,8 @@ import type {
   TaskopsProjectMember,
   TaskopsGoal,
   TaskopsDashboard,
+  TaskopsDependencyType,
+  TaskopsNote,
 } from '../types';
 
 interface PaginatedResponse<T> {
@@ -16,6 +18,20 @@ interface PaginatedResponse<T> {
   page: number;
   per_page: number;
   pages: number;
+}
+
+export interface AssignableUser {
+  id: string;
+  full_name: string;
+  role: string;
+}
+
+export function useAssignableUsers() {
+  return useQuery<AssignableUser[]>({
+    queryKey: ['taskops', 'assignable-users'],
+    queryFn: () => api.get('/v1/taskops/assignable-users').then((r) => r.data),
+    staleTime: 5 * 60_000,
+  });
 }
 
 // ─── Projects ────────────────────────────────────────────────────────────────
@@ -64,6 +80,42 @@ export function useDeleteProject() {
   });
 }
 
+// Special system project for standalone assignments (поручения)
+export const ORDERS_PROJECT_NAME = '📝 Поручения';
+export const MAP_INCIDENTS_PROJECT_NAME = '🚩 Инциденты с карты';
+
+export function useGetOrCreateOrdersProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<TaskopsProject> => {
+      const projects: TaskopsProject[] = await api.get('/v1/taskops/projects').then((r) => r.data);
+      const existing = projects.find((p) => p.name === ORDERS_PROJECT_NAME);
+      if (existing) return existing;
+      return api.post('/v1/taskops/projects', {
+        name: ORDERS_PROJECT_NAME,
+        description: 'Системный контейнер для разовых поручений без проекта',
+      }).then((r) => r.data);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['taskops', 'projects'] }),
+  });
+}
+
+export function useGetOrCreateIncidentsProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<TaskopsProject> => {
+      const projects: TaskopsProject[] = await api.get('/v1/taskops/projects').then((r) => r.data);
+      const existing = projects.find((p) => p.name === MAP_INCIDENTS_PROJECT_NAME);
+      if (existing) return existing;
+      return api.post('/v1/taskops/projects', {
+        name: MAP_INCIDENTS_PROJECT_NAME,
+        description: 'Системный контейнер для инцидентов, созданных на карте объектов',
+      }).then((r) => r.data);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['taskops', 'projects'] }),
+  });
+}
+
 // ─── Project Members ─────────────────────────────────────────────────────────
 
 export function useProjectMembers(projectId: string) {
@@ -106,14 +158,18 @@ interface TasksFilter {
   per_page?: number;
 }
 
-export function useProjectTasks(projectId: string, filter: TasksFilter = {}) {
+export function useProjectTasks(
+  projectId: string,
+  filter: TasksFilter = {},
+  options: { enabled?: boolean } = {}
+) {
   return useQuery<PaginatedResponse<TaskopsTask>>({
     queryKey: ['taskops', 'tasks', projectId, filter],
     queryFn: () =>
       api
         .get(`/v1/taskops/projects/${projectId}/tasks`, { params: filter })
         .then((r) => r.data),
-    enabled: !!projectId,
+    enabled: !!projectId && (options.enabled !== false),
   });
 }
 
@@ -130,7 +186,14 @@ export function useCreateTask(projectId: string) {
   return useMutation({
     mutationFn: (data: Partial<TaskopsTask> & { label_ids?: string[] }) =>
       api.post(`/v1/taskops/projects/${projectId}/tasks`, data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['taskops', 'tasks', projectId] }),
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ['taskops', 'tasks', projectId] });
+      if (res.parent_task_id) {
+        qc.invalidateQueries({ queryKey: ['taskops', 'subtasks', res.parent_task_id] });
+        qc.invalidateQueries({ queryKey: ['taskops', 'task', res.parent_task_id] });
+      }
+      qc.invalidateQueries({ queryKey: ['taskops', 'inbox'] });
+    },
   });
 }
 
@@ -139,8 +202,12 @@ export function useUpdateTask(taskId: string, projectId?: string) {
   return useMutation({
     mutationFn: (data: Partial<TaskopsTask> & { label_ids?: string[] }) =>
       api.patch(`/v1/taskops/tasks/${taskId}`, data).then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ['taskops', 'task', taskId] });
+      if (res.parent_task_id) {
+        qc.invalidateQueries({ queryKey: ['taskops', 'subtasks', res.parent_task_id] });
+        qc.invalidateQueries({ queryKey: ['taskops', 'task', res.parent_task_id] });
+      }
       if (projectId) qc.invalidateQueries({ queryKey: ['taskops', 'tasks', projectId] });
       qc.invalidateQueries({ queryKey: ['taskops', 'inbox'] });
     },
@@ -176,10 +243,18 @@ export function useAddComment(taskId: string) {
 
 // ─── Inbox ────────────────────────────────────────────────────────────────────
 
-export function useMyInbox() {
+export function useMyInbox(params: { limit?: number; offset?: number } = {}) {
+  return useQuery<{ items: TaskopsTask[]; total: number; limit: number; offset: number }>({
+    queryKey: ['taskops', 'inbox', params],
+    queryFn: () => api.get('/v1/taskops/me/inbox', { params }).then((r) => r.data),
+  });
+}
+
+export function useMyAssigned(includeDone = false) {
   return useQuery<TaskopsTask[]>({
-    queryKey: ['taskops', 'inbox'],
-    queryFn: () => api.get('/v1/taskops/me/inbox').then((r) => r.data),
+    queryKey: ['taskops', 'assigned', includeDone],
+    queryFn: () =>
+      api.get('/v1/taskops/me/assigned', { params: { include_done: includeDone } }).then((r) => r.data),
   });
 }
 
@@ -241,12 +316,12 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
-export function useAuditLog(projectId?: string) {
-  return useQuery<AuditLogEntry[]>({
-    queryKey: ['taskops', 'audit-log', projectId ?? 'global'],
+export function useAuditLog(params: { project_id?: string; limit?: number; offset?: number } = {}) {
+  return useQuery<{ items: AuditLogEntry[]; total: number; limit: number; offset: number }>({
+    queryKey: ['taskops', 'audit-log', params],
     queryFn: () =>
       api
-        .get('/v1/taskops/audit-log', { params: projectId ? { project_id: projectId } : {} })
+        .get('/v1/taskops/audit-log', { params })
         .then((r) => r.data),
     staleTime: 30_000,
   });
@@ -254,10 +329,10 @@ export function useAuditLog(projectId?: string) {
 
 // ─── Goals ───────────────────────────────────────────────────────────────────
 
-export function useGoals() {
-  return useQuery<TaskopsGoal[]>({
-    queryKey: ['taskops', 'goals'],
-    queryFn: () => api.get('/v1/taskops/goals').then((r) => r.data),
+export function useGoals(params: { limit?: number; offset?: number; sort_by?: string; order?: string } = {}) {
+  return useQuery<{ items: TaskopsGoal[]; total: number; limit: number; offset: number }>({
+    queryKey: ['taskops', 'goals', params],
+    queryFn: () => api.get('/v1/taskops/goals', { params }).then((r) => r.data),
   });
 }
 
@@ -289,10 +364,129 @@ export function useDeleteGoal() {
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
-export function useDashboard() {
+export function useDashboard(params: { by_assignee_limit?: number; risk_tasks_limit?: number } = {}) {
   return useQuery<TaskopsDashboard>({
-    queryKey: ['taskops', 'dashboard'],
-    queryFn: () => api.get('/v1/taskops/dashboard').then((r) => r.data),
+    queryKey: ['taskops', 'dashboard', params],
+    queryFn: () => api.get('/v1/taskops/dashboard', { params }).then((r) => r.data),
     staleTime: 60_000,
+  });
+}
+
+export function useUserTasks(userId: string | null, includeDone = false) {
+  return useQuery<TaskopsTask[]>({
+    queryKey: ['taskops', 'user-tasks', userId, includeDone],
+    queryFn: () =>
+      api
+        .get(`/v1/taskops/users/${userId}/tasks`, { params: { include_done: includeDone } })
+        .then((r) => r.data),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+}
+
+// ─── Attachments ─────────────────────────────────────────────────────────────
+
+export function useUploadAttachment(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return api
+        .post(`/v1/taskops/tasks/${taskId}/attachments`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+        .then((r) => r.data);
+    },
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ['taskops', 'task', taskId] });
+      if (res.data?.parent_task_id) {
+        qc.invalidateQueries({ queryKey: ['taskops', 'subtasks', res.data.parent_task_id] });
+        qc.invalidateQueries({ queryKey: ['taskops', 'task', res.data.parent_task_id] });
+      }
+      qc.invalidateQueries({ queryKey: ['taskops', 'inbox'] });
+    },
+  });
+}
+
+export function useDeleteAttachment(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId: string) =>
+      api.delete(`/v1/taskops/attachments/${attachmentId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['taskops', 'task', taskId] });
+      qc.invalidateQueries({ queryKey: ['taskops', 'inbox'] });
+    },
+  });
+}
+
+export function useSubtasks(taskId: string) {
+  return useQuery<TaskopsTask[]>({
+    queryKey: ['taskops', 'subtasks', taskId],
+    queryFn: async () => {
+      const res = await api.get(`/v1/taskops/tasks/${taskId}/subtasks`);
+      return res.data;
+    },
+    enabled: !!taskId,
+  });
+}
+
+export function useCreateDependency(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { target_task_id: string; type: TaskopsDependencyType }) =>
+      api.post(`/v1/taskops/tasks/${taskId}/dependencies`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['taskops', 'task', taskId] });
+    },
+  });
+}
+
+export function useDeleteDependency(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (depId: string) =>
+      api.delete(`/v1/taskops/dependencies/${depId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['taskops', 'task', taskId] });
+    },
+  });
+}
+
+// ─── Notes ───────────────────────────────────────────────────────────────────
+
+const NOTES_KEY = ['taskops', 'notes'] as const;
+
+export function useNotes(params: { q?: string } = {}) {
+  return useQuery<{ items: TaskopsNote[] }>({
+    queryKey: [...NOTES_KEY, params],
+    queryFn: () => api.get('/v1/taskops/notes', { params }).then((r) => r.data),
+  });
+}
+
+export function useCreateNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { title?: string; content?: string }) =>
+      api.post('/v1/taskops/notes', data).then((r) => r.data as TaskopsNote),
+    onSuccess: () => qc.invalidateQueries({ queryKey: NOTES_KEY }),
+  });
+}
+
+export function useUpdateNote(noteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { title?: string; content?: string; is_pinned?: boolean }) =>
+      api.patch(`/v1/taskops/notes/${noteId}`, data).then((r) => r.data as TaskopsNote),
+    onSuccess: () => qc.invalidateQueries({ queryKey: NOTES_KEY }),
+  });
+}
+
+export function useDeleteNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (noteId: string) => api.delete(`/v1/taskops/notes/${noteId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: NOTES_KEY }),
   });
 }

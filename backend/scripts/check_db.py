@@ -1,6 +1,9 @@
 import asyncio
-from app.database import engine
+
 from sqlalchemy import text
+
+from app.database import engine
+
 
 async def check():
     async with engine.connect() as conn:
@@ -16,8 +19,8 @@ async def check():
             
         locations = (await conn.execute(text('SELECT id, name FROM locations'))).all()
         print(f"\nLocations: {len(locations)}")
-        for l in locations[:10]: # Show first 10
-            print(dict(l._mapping))
+        for loc in locations[:10]:
+            print(dict(loc._mapping))
 
 if __name__ == "__main__":
     asyncio.run(check())

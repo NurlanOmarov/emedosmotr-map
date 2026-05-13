@@ -1,7 +1,25 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef } from 'react';
 import styled from 'styled-components';
+import {
+  LuStar,
+  LuHospital,
+  LuMonitor,
+  LuCheck,
+  LuClock,
+  LuPencil,
+  LuStethoscope,
+  LuMapPin,
+  LuClipboardList,
+  LuActivity,
+  LuTrash2,
+  LuX,
+  LuMicroscope,
+  LuPhone,
+  LuServer
+} from 'react-icons/lu';
 import {
   StatusType,
   RESEARCH_LABELS,
@@ -407,23 +425,23 @@ const LightboxClose = styled.button`
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
-  military_office:        { label: 'Военкомат',          icon: '⭐' },
-  district_hospital:      { label: 'ЦРБ',               icon: '/icons/hospital.png' },
-  state_medical:          { label: 'Гос. мед. орг.',     icon: '/icons/hospital.png' },
-  private_medical:        { label: 'Частная мед. орг.',  icon: '/icons/hospital.png' },
-  private_clinic:         { label: 'Частная клиника',    icon: '/icons/hospital.png' },
-  medical_center:         { label: 'Медцентр',           icon: '/icons/hospital.png' },
-  relay_server_location:  { label: 'Перевалочный сервер',icon: '🖥️' },
+const TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
+  military_office:        { label: 'Военкомат',          icon: <LuStar size={14} /> },
+  district_hospital:      { label: 'ЦРБ',               icon: <LuHospital size={14} /> },
+  state_medical:          { label: 'Гос. мед. орг.',     icon: <LuHospital size={14} /> },
+  private_medical:        { label: 'Частная мед. орг.',  icon: <LuHospital size={14} /> },
+  private_clinic:         { label: 'Частная клиника',    icon: <LuHospital size={14} /> },
+  medical_center:         { label: 'Медцентр',           icon: <LuHospital size={14} /> },
+  relay_server_location:  { label: 'Перевалочный сервер',icon: <LuMonitor size={14} /> },
 };
 
 
 
 
-const STATUS_OPTIONS: { value: StatusType; label: string }[] = [
-  { value: 'ready',       label: '✅ Готов'    },
-  { value: 'in_progress', label: '🟡 В работе' },
-  { value: 'critical',    label: '🔴 Критично' },
+const STATUS_OPTIONS: { value: StatusType; label: string; icon: React.ReactNode }[] = [
+  { value: 'ready',       label: 'Готов',    icon: <LuCheck size={14} /> },
+  { value: 'in_progress', label: 'В работе', icon: <LuClock size={14} /> },
+  { value: 'critical',    label: 'Критично', icon: <LuActivity size={14} /> },
 ];
 
 // Task constants moved to @/components/shared/TaskComponents
@@ -501,7 +519,7 @@ function OverviewTab({ location, canEdit, onStatusChange, isUpdatingStatus }: Ov
           <SectionTitle>
             {location.type === 'military_office' ? 'Примечания по договору' : 'Примечания'}
           </SectionTitle>
-          <div style={{ fontSize: 13, color: props => props.theme.colors.textSecondary, lineHeight: 1.6 }}>{location.notes}</div>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{location.notes}</div>
         </Card>
       )}
 
@@ -561,7 +579,7 @@ function OverviewTab({ location, canEdit, onStatusChange, isUpdatingStatus }: Ov
                   <DeleteBtn onClick={(e) => {
                     e.stopPropagation();
                     if(confirm('Удалить фото?')) deleteMutation.mutate(url);
-                  }}>✕</DeleteBtn>
+                  }}><LuTrash2 size={10} /></DeleteBtn>
                 )}
               </PhotoItem>
             ))}
@@ -571,7 +589,7 @@ function OverviewTab({ location, canEdit, onStatusChange, isUpdatingStatus }: Ov
 
       {selectedImage && (
         <LightboxOverlay onClick={() => setSelectedImage(null)}>
-          <LightboxClose onClick={() => setSelectedImage(null)}>×</LightboxClose>
+          <LightboxClose onClick={() => setSelectedImage(null)}><LuX /></LightboxClose>
           <LightboxImage src={selectedImage} alt="Full view" onClick={e => e.stopPropagation()} />
         </LightboxOverlay>
       )}
@@ -599,7 +617,10 @@ function OverviewTab({ location, canEdit, onStatusChange, isUpdatingStatus }: Ov
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
               >
-                {opt.label}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {opt.icon}
+                  {opt.label}
+                </span>
               </motion.button>
             ))}
           </div>
@@ -612,6 +633,7 @@ function OverviewTab({ location, canEdit, onStatusChange, isUpdatingStatus }: Ov
 // ─── Tab: Commission ─────────────────────────────────────────────────────────
 
 function CommissionTab({ locationId, canEdit }: { locationId: string; canEdit: boolean }) {
+  const { triggerUpdate } = useMapViewStore();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const { data, isLoading, isError } = useQuery({
@@ -625,7 +647,7 @@ function CommissionTab({ locationId, canEdit }: { locationId: string; canEdit: b
   if (isError || !data) {
     return (
       <>
-        <EmptyState icon="🖥️" title="Нет данных о комиссии" subtitle="Информация о рабочих местах ещё не добавлена" />
+        <EmptyState icon={<LuMonitor size={32} />} title="Нет данных о комиссии" subtitle="Информация о рабочих местах ещё не добавлена" />
         {canEdit && (
           <div style={{ padding: '0 14px' }}>
              <Button variant="primary" style={{ width: '100%' }} onClick={() => setEditing(true)}>+ Добавить данные</Button>
@@ -660,7 +682,7 @@ function CommissionTab({ locationId, canEdit }: { locationId: string; canEdit: b
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <SectionTitle style={{ margin: 0 }}>Компьютеры и Врачи</SectionTitle>
           {canEdit && (
-            <Button size="xs" variant="ghost" onClick={() => setEditing(true)}>✏️</Button>
+            <Button size="xs" variant="ghost" onClick={() => setEditing(true)}><LuPencil size={12} /></Button>
           )}
         </div>
         
@@ -692,7 +714,7 @@ function CommissionTab({ locationId, canEdit }: { locationId: string; canEdit: b
           </div>
           {hasDeficit && (
             <div style={{ marginTop: 8, fontSize: 11, color: '#F87171', fontWeight: 500 }}>
-              ⚠ Дефицит: {data.doctors_count - data.connected_computers_count} шт.
+              <LuActivity size={11} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Дефицит: {data.doctors_count - data.connected_computers_count} шт.
             </div>
           )}
         </div>
@@ -733,7 +755,7 @@ function CommissionTab({ locationId, canEdit }: { locationId: string; canEdit: b
           <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{data.comment}</div>
         )}
         {data.address && (
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>📍 {data.address}</div>
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}><LuMapPin size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} /> {data.address}</div>
         )}
         <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
           Обновлено: {new Date(data.last_updated_at).toLocaleDateString('ru-RU')}
@@ -818,6 +840,7 @@ const ResearchStatusBadge = styled.div<{ $status: StatusType }>`
 `;
 
 function DiagnosticsTab({ locationId, canEdit }: { locationId: string; canEdit: boolean }) {
+  const { triggerUpdate } = useMapViewStore();
   const qc = useQueryClient();
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [editingResearch, setEditingResearch] = useState<MedicalResearch | null>(null);
@@ -840,7 +863,7 @@ function DiagnosticsTab({ locationId, canEdit }: { locationId: string; canEdit: 
 
   if (orgsLoading) return <TabLoading />;
   if (!orgs || orgs.length === 0) {
-    return <EmptyState icon="🔬" title="Нет мед. организаций" subtitle="Для отслеживания исследований сначала добавьте мед. организацию" />;
+    return <EmptyState icon={<LuMicroscope size={32} />} title="Нет мед. организаций" subtitle="Для отслеживания исследований сначала добавьте мед. организацию" />;
   }
 
   const researchMap = (researches || []).reduce((acc, r) => {
@@ -920,6 +943,7 @@ function DiagnosticsTab({ locationId, canEdit }: { locationId: string; canEdit: 
                          onClick={e => e.stopPropagation()}
                          style={{ marginLeft: 'auto', fontSize: 11, color: '#22C55E', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
                        >
+                         <LuPhone size={11} />
                          <span>WhatsApp</span>
                        </a>
                     )}
@@ -1136,7 +1160,7 @@ function ResearchModal({ research, onClose, onSave }: { research: MedicalResearc
             $active={form.is_connected} 
             onClick={() => setForm({...form, is_connected: !form.is_connected})}
           >
-            <div style={{ fontSize: 16 }}>🔌</div>
+            <LuMonitor size={18} />
             <div style={{ fontSize: 10, fontWeight: 600 }}>Подключено</div>
           </StepButton>
           <StepButton 
@@ -1144,7 +1168,7 @@ function ResearchModal({ research, onClose, onSave }: { research: MedicalResearc
             $disabled={!form.is_connected}
             onClick={() => form.is_connected && setForm({...form, staff_trained: !form.staff_trained})}
           >
-            <div style={{ fontSize: 16 }}>👨‍⚕️</div>
+            <LuStethoscope size={18} />
             <div style={{ fontSize: 10, fontWeight: 600 }}>Обучены</div>
           </StepButton>
           <StepButton 
@@ -1152,7 +1176,7 @@ function ResearchModal({ research, onClose, onSave }: { research: MedicalResearc
             $disabled={!form.is_connected || !form.staff_trained}
             onClick={() => form.is_connected && form.staff_trained && setForm({...form, has_data_stream: !form.has_data_stream})}
           >
-            <div style={{ fontSize: 16 }}>📊</div>
+            <LuActivity size={18} />
             <div style={{ fontSize: 10, fontWeight: 600 }}>Данные</div>
           </StepButton>
         </div>
@@ -1468,10 +1492,10 @@ function TabLoading() {
   );
 }
 
-function EmptyState({ icon, title, subtitle }: { icon: string; title: string; subtitle: string }) {
+function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 8, textAlign: 'center' }}>
-      <div style={{ fontSize: 32, marginBottom: 4 }}>{icon}</div>
+      <div style={{ marginBottom: 4, color: 'var(--text-muted)' }}>{icon}</div>
       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
       <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{subtitle}</div>
     </div>
@@ -1550,14 +1574,14 @@ export function LocationDetail({ locationId }: Props) {
   const isMedical = MEDICAL_TYPES.includes(location.type);
   const isRelay = location.type === 'relay_server_location';
 
-  const tabs: { id: TabId; label: string; icon: string; count?: number | null }[] = [
-    { id: 'overview', label: 'Основное', icon: '📋' },
-    ...(isMilitary ? [{ id: 'commission' as TabId, label: 'Комиссия', icon: '🖥️' }] : []),
+  const tabs: { id: TabId; label: string; icon: React.ReactNode; count?: number | null }[] = [
+    { id: 'overview', label: 'Основное', icon: <LuClipboardList size={14} /> },
+    ...(isMilitary ? [{ id: 'commission' as TabId, label: 'Комиссия', icon: <LuMonitor size={14} /> }] : []),
     ...(isMedical   ? [
-      { id: 'diagnostics' as TabId, label: 'Исследования', icon: '🔬' }
+      { id: 'diagnostics' as TabId, label: 'Исследования', icon: <LuMicroscope size={14} /> }
     ] : []),
-    ...(isRelay     ? [{ id: 'server' as TabId, label: 'Сервер', icon: '🖧' }] : []),
-    { id: 'tasks', label: 'Задачи', icon: '✅', count: location.tasks_count },
+    ...(isRelay     ? [{ id: 'server' as TabId, label: 'Сервер', icon: <LuServer size={14} /> }] : []),
+    { id: 'tasks', label: 'Задачи', icon: <LuClipboardList size={14} />, count: location.tasks_count },
   ];
 
   // Reset to overview if current tab not available for this type
@@ -1597,10 +1621,10 @@ export function LocationDetail({ locationId }: Props) {
         <HeaderMeta>
           <TypeBadge>
             <TypeIcon>
-              {typeInfo.icon.startsWith('/') ? (
+              {typeof typeInfo.icon === 'string' && typeInfo.icon.startsWith('/') ? (
                 <img src={typeInfo.icon} alt="" />
               ) : (
-                typeInfo.icon
+                typeInfo.icon as React.ReactNode
               )}
             </TypeIcon>
             {typeInfo.label}

@@ -1,6 +1,7 @@
 import uuid
 from datetime import date, datetime
-from pydantic import BaseModel, ConfigDict
+
+from pydantic import BaseModel
 
 
 class EquipmentResponse(BaseModel):

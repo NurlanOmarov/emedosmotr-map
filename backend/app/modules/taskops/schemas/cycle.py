@@ -1,6 +1,5 @@
 import uuid
 from datetime import date, datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +18,7 @@ class CycleResponse(BaseModel):
     end_date: date
     is_closed: bool
     created_at: datetime
-    task_count: Optional[int] = None
-    done_count: Optional[int] = None
+    task_count: int | None = None
+    done_count: int | None = None
 
     model_config = {"from_attributes": True}

@@ -1,6 +1,7 @@
 import json
+
 import structlog
-from pywebpush import webpush, WebPushException
+from pywebpush import WebPushException, webpush
 
 from app.config import settings
 from app.models.push import PushSubscription

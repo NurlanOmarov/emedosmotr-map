@@ -2,6 +2,12 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import {
+  LuX,
+  LuKey,
+  LuChevronRight,
+  LuMapPin
+} from 'react-icons/lu';
 import { locationsApi, districtAccountsApi } from '@/services/api';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
 import { STATUS_COLORS, LOCATION_TYPE_CONFIG } from '@/types';
@@ -273,7 +279,7 @@ export function SettlementDetail() {
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
     >
       <DragHandle />
-      <CloseButton onClick={backToRegion}>✕</CloseButton>
+      <CloseButton onClick={backToRegion}><LuX size={16} /></CloseButton>
       
       <PanelHeader>
         <SettlementName>{selectedSettlementName}</SettlementName>
@@ -307,7 +313,10 @@ export function SettlementDetail() {
             $active={activeTab === 'accounts'}
             onClick={() => setActiveTab('accounts')}
           >
-            🔑 Учётки
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <LuKey size={14} />
+              <span>Учётки</span>
+            </div>
           </Tab>
         )}
       </TabBar>
@@ -337,13 +346,13 @@ export function SettlementDetail() {
                         <LocationName>{loc.name}</LocationName>
                         <LocationMeta>{typeLabel}</LocationMeta>
                       </LocationInfo>
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>→</span>
+                      <LuChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
                     </LocationItem>
                   );
                 })}
                 {locations.length === 0 && (
                   <EmptyState>
-                    <div style={{ fontSize: 24, marginBottom: 12 }}>📍</div>
+                    <div style={{ marginBottom: 12, color: 'var(--text-muted)' }}><LuMapPin size={32} /></div>
                     В этом населенном пункте пока нет объектов
                   </EmptyState>
                 )}
@@ -370,7 +379,7 @@ export function SettlementDetail() {
                   fontWeight: 600, cursor: 'pointer',
                 }}
               >
-                Открыть полный список →
+                Открыть полный список <LuChevronRight size={14} />
               </button>
             </div>
             {accountsData && accountsData.length > 0 ? (

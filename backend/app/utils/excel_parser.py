@@ -1,9 +1,10 @@
-import openpyxl
-from typing import List, Dict, Any
 from io import BytesIO
+from typing import Any
+
+import openpyxl
 
 
-def parse_district_accounts_excel(file_content: bytes, settlement_id: int) -> List[Dict[str, Any]]:
+def parse_district_accounts_excel(file_content: bytes, settlement_id: int) -> list[dict[str, Any]]:
     """
     Parses district accounts from Excel file.
     Expected format:

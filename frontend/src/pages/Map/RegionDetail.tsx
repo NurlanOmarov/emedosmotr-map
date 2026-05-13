@@ -1,11 +1,20 @@
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
+import { 
+  LuMapPin, 
+  LuX, 
+  LuPencil, 
+  LuChevronRight, 
+  LuPlus, 
+  LuPhone 
+} from 'react-icons/lu';
 import { geoApi } from '@/services/api';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { TasksList } from '@/components/shared/TasksList';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 
 
 const FormLabel = styled.div`
@@ -259,6 +268,7 @@ function SettlementModal({
   onClose: () => void, 
   onSave: (data: any) => void 
 }) {
+  const confirm = useConfirm();
   const {
     isPickingLocation,
     setPickingLocation,
@@ -319,18 +329,22 @@ function SettlementModal({
             style={{ height: '37px', padding: '0 12px', fontSize: 18 }}
             title="Указать на карте"
           >
-            📍
+            <LuMapPin size={18} />
           </Button>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           {settlement && (
-            <Button 
-              variant="secondary" 
-              onClick={() => {
-                if (window.confirm('Вы уверены, что хотите удалить этот район?')) {
-                  onSave({...form, _delete: true});
-                }
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Удалить район?',
+                  message: `«${form.name}» будет удалён безвозвратно.`,
+                  confirmLabel: 'Удалить',
+                  variant: 'danger',
+                });
+                if (ok) onSave({...form, _delete: true});
               }}
               style={{ color: '#ef4444' }}
             >
@@ -408,7 +422,7 @@ export function RegionDetail() {
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
     >
       <DragHandle />
-      <CloseButton onClick={backToCountry}>✕</CloseButton>
+      <CloseButton onClick={backToCountry}><LuX size={16} /></CloseButton>
       
       <PanelHeader>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -420,7 +434,7 @@ export function RegionDetail() {
               onClick={() => setIsEditingRegion(true)}
               style={{ padding: '2px', opacity: 0.5 }}
             >
-              ✏️
+              <LuPencil size={12} />
             </Button>
           )}
         </div>
@@ -436,24 +450,25 @@ export function RegionDetail() {
             {region.engineer_phone && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{region.engineer_phone}</div>
-                <a 
-                  href={`https://wa.me/${region.engineer_phone.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ 
-                    fontSize: 11, 
-                    color: '#22C55E', 
-                    textDecoration: 'none', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 4,
-                    padding: '4px 8px',
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    borderRadius: 6
-                  }}
-                >
-                  <span>WhatsApp</span>
-                </a>
+                  <a 
+                    href={`https://wa.me/${region.engineer_phone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ 
+                      fontSize: 11, 
+                      color: '#22C55E', 
+                      textDecoration: 'none', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 4,
+                      padding: '4px 8px',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      borderRadius: 6
+                    }}
+                  >
+                    <LuPhone size={11} />
+                    <span>WhatsApp</span>
+                  </a>
               </div>
             )}
           </div>
@@ -499,7 +514,10 @@ export function RegionDetail() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <SectionTitle>Список районов</SectionTitle>
               {isAdmin && (
-                <Button variant="primary" size="xs" onClick={() => setIsAdding(true)}>+ Добавить</Button>
+                <Button variant="primary" size="xs" onClick={() => setIsAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <LuPlus size={14} />
+                  <span>Добавить</span>
+                </Button>
               )}
             </div>
             {isLoading ? (
@@ -527,10 +545,10 @@ export function RegionDetail() {
                           }}
                           style={{ padding: '4px', opacity: 0.6 }}
                         >
-                          ✏️
+                          <LuPencil size={12} />
                         </Button>
                       )}
-                      <ArrowIcon>→</ArrowIcon>
+                      <ArrowIcon><LuChevronRight size={14} /></ArrowIcon>
                     </div>
                   </DistrictItem>
                 ))}

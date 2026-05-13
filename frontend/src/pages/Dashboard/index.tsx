@@ -2,6 +2,14 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import styled, { useTheme } from 'styled-components';
+import { 
+  LuMapPin, 
+  LuCheck, 
+  LuZap, 
+  LuTriangleAlert,
+  LuChartBar,
+  LuTarget
+} from 'react-icons/lu';
 import { analyticsApi, geoApi } from '@/services/api';
 import { Card } from '@/components/ui/Card';
 
@@ -138,14 +146,14 @@ const KPI_CONFIGS = [
   {
     key: 'total_locations',
     label: 'Всего объектов',
-    icon: '📍',
+    icon: <LuMapPin size={14} />,
     baseColor: '#3B82F6',
     suffix: '',
   },
   {
     key: 'ready',
     label: 'Готовы',
-    icon: '✅',
+    icon: <LuCheck size={14} />,
     baseColor: '#22C55E',
     suffix: '',
     fromStatus: 'ready',
@@ -153,14 +161,14 @@ const KPI_CONFIGS = [
   {
     key: 'in_progress',
     label: 'В работе',
-    icon: '🟡',
+    icon: <LuZap size={14} />,
     baseColor: '#F59E0B',
     fromStatus: 'in_progress',
   },
   {
     key: 'critical',
     label: 'Критичные',
-    icon: '🔴',
+    icon: <LuTriangleAlert size={14} />,
     baseColor: '#EF4444',
     fromStatus: 'critical',
   },
@@ -232,7 +240,7 @@ export function DashboardPage() {
         <motion.div variants={item}>
           <Card padding="20px">
             <SectionTitle>
-              <span>📊</span> Статусы по регионам
+              <LuChartBar size={16} /> Статусы по регионам
             </SectionTitle>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
@@ -249,7 +257,7 @@ export function DashboardPage() {
         <motion.div variants={item}>
           <Card padding="20px">
             <SectionTitle>
-              <span>🎯</span> Доля готовых объектов
+              <LuTarget size={16} /> Доля готовых объектов
             </SectionTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {(regionStats ?? []).map((r: any) => {

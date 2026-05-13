@@ -1,5 +1,5 @@
 export const darkTheme = {
-  mode: 'dark' as const,
+  mode: 'dark' as 'light' | 'dark',
   colors: {
     // Brand
     primary: '#3B82F6',
@@ -65,7 +65,7 @@ export const darkTheme = {
 };
 
 export const lightTheme = {
-  mode: 'light' as const,
+  mode: 'light' as 'light' | 'dark',
   colors: {
     // Brand
     primary: '#2563EB',

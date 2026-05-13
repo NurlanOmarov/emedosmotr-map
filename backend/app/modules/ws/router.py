@@ -26,7 +26,7 @@ async def ws_map(websocket: WebSocket, token: str = Query(...)):
             data = await asyncio.wait_for(websocket.receive_json(), timeout=35)
             if data.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
-    except (WebSocketDisconnect, asyncio.TimeoutError):
+    except (TimeoutError, WebSocketDisconnect):
         ws_manager.disconnect(websocket, rooms)
 
 
@@ -47,7 +47,7 @@ async def ws_tasks(websocket: WebSocket, token: str = Query(...)):
             data = await asyncio.wait_for(websocket.receive_json(), timeout=35)
             if data.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
-    except (WebSocketDisconnect, asyncio.TimeoutError):
+    except (TimeoutError, WebSocketDisconnect):
         ws_manager.disconnect(websocket, rooms)
 
 
@@ -69,5 +69,5 @@ async def ws_taskops(websocket: WebSocket, token: str = Query(...)):
             data = await asyncio.wait_for(websocket.receive_json(), timeout=35)
             if data.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
-    except (WebSocketDisconnect, asyncio.TimeoutError):
+    except (TimeoutError, WebSocketDisconnect):
         ws_manager.disconnect(websocket, rooms)

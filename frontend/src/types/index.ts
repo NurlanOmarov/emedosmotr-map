@@ -1,11 +1,20 @@
-export type UserRole =
-  | 'admin'
-  | 'superadmin'
-  | 'director'
-  | 'regional_manager'
-  | 'engineer'
-  | 'operator'
-  | 'analyst';
+export type UserRole = string;
+
+export interface Role {
+  name: string;
+  display_name: string;
+  description: string | null;
+  color: string;
+  is_system: boolean;
+  permissions: string[];
+  created_at: string;
+}
+
+export interface Feature {
+  key: string;
+  name: string;
+  category: string;
+}
 
 export type LocationType =
   | 'military_office'

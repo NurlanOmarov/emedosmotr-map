@@ -1,6 +1,5 @@
 import uuid
 from datetime import date, datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -9,21 +8,21 @@ from app.models.taskops import EstimateType, ProjectMemberRole
 
 class ProjectCreate(BaseModel):
     name: str = Field(..., max_length=200)
-    description: Optional[str] = None
+    description: str | None = None
     is_external: bool = False
     estimate_type: EstimateType = EstimateType.t_shirt
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class ProjectUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=200)
-    description: Optional[str] = None
-    status: Optional[str] = None
-    is_external: Optional[bool] = None
-    estimate_type: Optional[EstimateType] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    name: str | None = Field(None, max_length=200)
+    description: str | None = None
+    status: str | None = None
+    is_external: bool | None = None
+    estimate_type: EstimateType | None = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class ProjectMemberAdd(BaseModel):
@@ -36,7 +35,7 @@ class ProjectMemberResponse(BaseModel):
     user_id: uuid.UUID
     role: ProjectMemberRole
     created_at: datetime
-    user_full_name: Optional[str] = None
+    user_full_name: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -44,16 +43,16 @@ class ProjectMemberResponse(BaseModel):
 class ProjectResponse(BaseModel):
     id: uuid.UUID
     name: str
-    description: Optional[str]
+    description: str | None
     status: str
     is_external: bool
     estimate_type: EstimateType
     owner_id: uuid.UUID
-    start_date: Optional[date]
-    end_date: Optional[date]
+    start_date: date | None
+    end_date: date | None
     created_at: datetime
     updated_at: datetime
-    task_count: Optional[int] = None
-    open_task_count: Optional[int] = None
+    task_count: int | None = None
+    open_task_count: int | None = None
 
     model_config = {"from_attributes": True}

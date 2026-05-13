@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styled, { useTheme } from 'styled-components';
 import { useNotificationStore } from './useNotificationStore';

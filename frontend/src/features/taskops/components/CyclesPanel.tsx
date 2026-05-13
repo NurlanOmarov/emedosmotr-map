@@ -4,138 +4,250 @@ import { useProjectCycles, useCreateCycle, useProjectTasks } from '../api';
 import type { TaskopsCycle } from '../types';
 import api from '@/services/api';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from 'recharts';
 
 const Panel = styled.div`
-  padding: 20px 24px;
+  padding: 24px;
   overflow-y: auto;
   height: 100%;
+  background: ${(p) => p.theme.colors.bg};
+
+  @media (max-width: 640px) {
+    padding: 16px;
+  }
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: ${(p) => p.theme.colors.textPrimary};
-  margin: 0 0 16px;
+  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    background: ${(p) => p.theme.colors.primary};
+    border-radius: 2px;
+  }
 `;
 
 const CycleCard = styled.div`
+  background: ${(p) => p.theme.colors.bgCard};
   border: 1px solid ${(p) => p.theme.colors.border};
-  border-radius: 10px;
-  margin-bottom: 12px;
+  border-radius: 14px;
+  margin-bottom: 20px;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  }
 `;
 
 const CycleHeader = styled.div<{ $closed?: boolean }>`
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 16px 20px;
   background: ${(p) => p.theme.colors.bgSecondary};
   border-bottom: 1px solid ${(p) => p.theme.colors.border};
-  opacity: ${(p) => (p.$closed ? 0.6 : 1)};
+  opacity: ${(p) => (p.$closed ? 0.7 : 1)};
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 `;
 
 const CycleName = styled.span`
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: ${(p) => p.theme.colors.textPrimary};
   flex: 1;
 `;
 
 const CycleDates = styled.span`
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: ${(p) => p.theme.colors.textSecondary};
+  background: ${(p) => p.theme.colors.bg};
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid ${(p) => p.theme.colors.border};
 `;
 
 const ClosedBadge = styled.span`
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgba(107,114,128,0.15);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(107,114,128,0.1);
   color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 `;
 
-const ProgressBar = styled.div<{ $pct: number }>`
-  height: 3px;
+const ProgressBarWrapper = styled.div`
+  height: 6px;
   background: ${(p) => p.theme.colors.border};
   position: relative;
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: ${(p) => p.$pct}%;
-    background: ${(p) => p.theme.colors.primary};
-    border-radius: 2px;
-    transition: width 0.3s;
-  }
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div<{ $pct: number }>`
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: ${(p) => p.$pct}%;
+  background: linear-gradient(90deg, ${(p) => p.theme.colors.primary}, ${(p) => p.theme.colors.primary}dd);
+  border-radius: 0 3px 3px 0;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const CycleBody = styled.div`
-  padding: 10px 16px;
+  padding: 20px;
 `;
 
 const CycleStats = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
 `;
 
 const Stat = styled.div`
-  font-size: 12px;
-  color: ${(p) => p.theme.colors.textSecondary};
-  strong { color: ${(p) => p.theme.colors.textPrimary}; font-size: 18px; display: block; }
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: ${(p) => p.theme.colors.bg};
+  border: 1px solid ${(p) => p.theme.colors.border};
+  border-radius: 10px;
+  
+  span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: ${(p) => p.theme.colors.textSecondary};
+    letter-spacing: 0.05em;
+  }
+
+  strong {
+    font-size: 20px;
+    font-weight: 800;
+    color: ${(p) => p.theme.colors.textPrimary};
+  }
 `;
 
 const CloseBtn = styled.button`
   font-size: 12px;
-  padding: 5px 12px;
-  border-radius: 6px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
   border: 1px solid ${(p) => p.theme.colors.border};
-  background: none;
+  background: ${(p) => p.theme.colors.bgCard};
   color: ${(p) => p.theme.colors.textSecondary};
   cursor: pointer;
-  &:hover { background: ${(p) => p.theme.colors.bgHover}; color: ${(p) => p.theme.colors.textPrimary}; }
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #ef444411;
+  }
 `;
 
 const Divider = styled.div`
   height: 1px;
   background: ${(p) => p.theme.colors.border};
-  margin: 20px 0 16px;
+  margin: 32px 0 24px;
 `;
 
 const Form = styled.div`
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 12px;
+  align-items: flex-end;
+  background: ${(p) => p.theme.colors.bgSecondary};
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid ${(p) => p.theme.colors.border};
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const FormField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const Label = styled.label`
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: ${(p) => p.theme.colors.textSecondary};
+  letter-spacing: 0.05em;
 `;
 
 const Input = styled.input`
-  background: ${(p) => p.theme.colors.bgSecondary};
+  background: ${(p) => p.theme.colors.bgCard};
   color: ${(p) => p.theme.colors.textPrimary};
   border: 1px solid ${(p) => p.theme.colors.border};
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  box-sizing: border-box;
-  &:focus { outline: none; border-color: ${(p) => p.theme.colors.primary}; }
-`;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  transition: all 0.2s;
 
-const DateInput = styled(Input)`
-  width: 140px;
+  &:focus {
+    outline: none;
+    border-color: ${(p) => p.theme.colors.primary};
+    box-shadow: 0 0 0 3px ${(p) => p.theme.colors.primary}22;
+  }
 `;
 
 const CreateBtn = styled.button`
   background: ${(p) => p.theme.colors.primary};
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
+  border-radius: 10px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  white-space: nowrap;
-  &:disabled { opacity: 0.5; }
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px ${(p) => p.theme.colors.primary}44;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 interface Props {
@@ -161,24 +273,117 @@ function CycleView({ cycle, projectId }: { cycle: TaskopsCycle; projectId: strin
     qc.invalidateQueries({ queryKey: ['taskops', 'tasks', projectId] });
   };
 
+  const burndownData = (() => {
+    const start = new Date(cycle.start_date);
+    const end = new Date(cycle.end_date);
+    const totalTasks = tasks.length;
+    if (totalTasks === 0) return [];
+
+    const days = [];
+    const curr = new Date(start);
+    while (curr <= end) {
+      days.push(new Date(curr));
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    const now = new Date();
+    return days.map((day) => {
+      const endOfDay = new Date(day);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const remaining = tasks.filter((t) => {
+        if (!t.completed_at) return true;
+        return new Date(t.completed_at) > endOfDay;
+      }).length;
+
+      const dayIdx = (day.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+      const totalDays = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      const ideal = totalTasks - (totalTasks / totalDays) * dayIdx;
+
+      return {
+        name: day.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+        remaining: day > now ? null : remaining,
+        ideal: Math.max(0, Math.round(ideal * 10) / 10),
+      };
+    });
+  })();
+
   return (
     <CycleCard>
-      <ProgressBar $pct={pct} />
+      <ProgressBarWrapper>
+        <ProgressFill $pct={pct} />
+      </ProgressBarWrapper>
       <CycleHeader $closed={cycle.is_closed}>
         <CycleName>{cycle.name}</CycleName>
         <CycleDates>{formatDate(cycle.start_date)} — {formatDate(cycle.end_date)}</CycleDates>
         {cycle.is_closed
           ? <ClosedBadge>закрыт</ClosedBadge>
-          : <CloseBtn onClick={handleClose}>Закрыть</CloseBtn>
+          : <CloseBtn onClick={handleClose}>Закрыть спринт</CloseBtn>
         }
       </CycleHeader>
       <CycleBody>
         <CycleStats>
-          <Stat><strong>{total}</strong>задач</Stat>
-          <Stat><strong>{done}</strong>готово</Stat>
-          <Stat><strong>{total - done}</strong>в работе</Stat>
-          <Stat><strong>{pct}%</strong>прогресс</Stat>
+          <Stat><span>Всего</span><strong>{total}</strong></Stat>
+          <Stat><span>Готово</span><strong>{done}</strong></Stat>
+          <Stat><span>В работе</span><strong>{total - done}</strong></Stat>
+          <Stat><span>Прогресс</span><strong>{pct}%</strong></Stat>
         </CycleStats>
+
+        {total > 0 && (
+          <div style={{ height: 200, marginTop: 24, width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={burndownData}>
+                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#9ca3af" opacity={0.2} />
+                <XAxis 
+                  dataKey="name" 
+                  fontSize={11} 
+                  tick={{ fill: '#6b7280', fontWeight: 500 }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  dy={10}
+                />
+                <YAxis 
+                  fontSize={11} 
+                  tick={{ fill: '#6b7280', fontWeight: 500 }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  width={25}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    background: '#fff', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '10px',
+                    fontSize: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }} 
+                />
+                <Legend 
+                  iconType="circle" 
+                  wrapperStyle={{ fontSize: 11, fontWeight: 600, paddingTop: 20 }} 
+                />
+                <Line 
+                  name="Идеальный график" 
+                  type="monotone" 
+                  dataKey="ideal" 
+                  stroke="#9ca3af" 
+                  strokeDasharray="6 6" 
+                  dot={false} 
+                  strokeWidth={1.5}
+                />
+                <Line 
+                  name="Фактический остаток" 
+                  type="monotone" 
+                  dataKey="remaining" 
+                  stroke="#3b82f6" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CycleBody>
     </CycleCard>
   );
@@ -210,45 +415,66 @@ export function CyclesPanel({ projectId }: Props) {
 
   return (
     <Panel>
-      <SectionTitle>Спринты</SectionTitle>
+      <SectionTitle>Текущие и будущие спринты</SectionTitle>
 
-      {isLoading && <div style={{ color: '#9ca3af', fontSize: 13 }}>Загрузка...</div>}
+      {isLoading && <div style={{ color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Загрузка...</div>}
 
-      {active.length > 0 && (
-        <>
-          {active.map((c) => <CycleView key={c.id} cycle={c} projectId={projectId} />)}
-          <Divider />
-        </>
+      {active.length === 0 && !isLoading && (
+        <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed #e5e7eb', borderRadius: '14px', color: '#6b7280', fontSize: 14, marginBottom: 20 }}>
+          Нет активных спринтов. Создайте новый ниже.
+        </div>
       )}
 
-      {closed.map((c) => <CycleView key={c.id} cycle={c} projectId={projectId} />)}
+      {active.map((c) => <CycleView key={c.id} cycle={c} projectId={projectId} />)}
 
       <Divider />
-      <SectionTitle style={{ fontSize: 13, marginBottom: 10 }}>Новый спринт</SectionTitle>
+      
+      <SectionTitle>Новый спринт</SectionTitle>
       <Form>
-        <Input
-          placeholder="Название спринта"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-        />
-        <DateInput
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-        />
-        <DateInput
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-        />
+        <FormField>
+          <Label htmlFor="sprint-name">Название</Label>
+          <Input
+            id="sprint-name"
+            placeholder="Например: Спринт 15"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+          />
+        </FormField>
+        <FormField>
+          <Label htmlFor="sprint-start">Начало</Label>
+          <Input
+            id="sprint-start"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </FormField>
+        <FormField>
+          <Label htmlFor="sprint-end">Конец</Label>
+          <Input
+            id="sprint-end"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </FormField>
         <CreateBtn
           onClick={handleCreate}
           disabled={!name.trim() || !startDate || !endDate || createCycle.isPending}
         >
-          Создать
+          {createCycle.isPending ? 'Создание...' : 'Создать спринт'}
         </CreateBtn>
       </Form>
+
+      {closed.length > 0 && (
+        <>
+          <Divider />
+          <SectionTitle>Завершённые спринты</SectionTitle>
+          {closed.map((c) => <CycleView key={c.id} cycle={c} projectId={projectId} />)}
+        </>
+      )}
     </Panel>
   );
 }
+

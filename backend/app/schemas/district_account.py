@@ -1,16 +1,16 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
 
 
 class DistrictAccountBase(BaseModel):
     full_name: str
-    login: Optional[str] = None
-    password: Optional[str] = None
-    role: Optional[str] = None
-    phone: Optional[str] = None
-    note: Optional[str] = None
-    category: Optional[str] = None
+    login: str | None = None
+    password: str | None = None
+    role: str | None = None
+    phone: str | None = None
+    note: str | None = None
+    category: str | None = None
     settlement_id: int
 
 
@@ -19,13 +19,13 @@ class DistrictAccountCreate(DistrictAccountBase):
 
 
 class DistrictAccountUpdate(BaseModel):
-    full_name: Optional[str] = None
-    login: Optional[str] = None
-    password: Optional[str] = None
-    role: Optional[str] = None
-    phone: Optional[str] = None
-    note: Optional[str] = None
-    category: Optional[str] = None
+    full_name: str | None = None
+    login: str | None = None
+    password: str | None = None
+    role: str | None = None
+    phone: str | None = None
+    note: str | None = None
+    category: str | None = None
 
 
 class DistrictAccount(DistrictAccountBase):

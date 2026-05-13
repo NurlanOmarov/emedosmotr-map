@@ -1,14 +1,32 @@
-from .project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectMemberAdd, ProjectMemberResponse
-from .task import TaskCreate, TaskUpdate, TaskResponse, CommentCreate, CommentResponse, DependencyCreate, DependencyResponse, LabelResponse
 from .cycle import CycleCreate, CycleResponse
-from .goal import GoalCreate, GoalUpdate, GoalResponse
+from .goal import GoalCreate, GoalResponse, GoalUpdate
+from .note import NoteCreate, NoteResponse, NoteUpdate
+from .project import (
+    ProjectCreate,
+    ProjectMemberAdd,
+    ProjectMemberResponse,
+    ProjectResponse,
+    ProjectUpdate,
+)
+from .task import (
+    AttachmentResponse,
+    CommentCreate,
+    CommentResponse,
+    DependencyCreate,
+    DependencyResponse,
+    LabelResponse,
+    TaskCreate,
+    TaskResponse,
+    TaskUpdate,
+)
 
 __all__ = [
     "ProjectCreate", "ProjectUpdate", "ProjectResponse", "ProjectMemberAdd", "ProjectMemberResponse",
     "TaskCreate", "TaskUpdate", "TaskResponse",
     "CommentCreate", "CommentResponse",
     "DependencyCreate", "DependencyResponse",
-    "LabelResponse",
+    "LabelResponse", "AttachmentResponse",
     "CycleCreate", "CycleResponse",
     "GoalCreate", "GoalUpdate", "GoalResponse",
+    "NoteCreate", "NoteUpdate", "NoteResponse",
 ]

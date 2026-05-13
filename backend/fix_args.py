@@ -1,8 +1,9 @@
 import os
 import re
 
+
 def fix_file(filepath):
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         content = f.read()
 
     # Find async def functions and reorder arguments
@@ -23,7 +24,7 @@ for root, _, files in os.walk("app"):
     for file in files:
         if file.endswith(".py"):
             path = os.path.join(root, file)
-            with open(path, "r") as f:
+            with open(path) as f:
                 content = f.read()
             
             # replace _: CurrentUser, -> _: User = Depends(get_current_user),

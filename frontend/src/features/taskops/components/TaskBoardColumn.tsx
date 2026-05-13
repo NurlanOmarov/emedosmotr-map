@@ -9,17 +9,25 @@ import { PriorityBadge } from './StatusBadge';
 
 // ─── Column ────────────────────────────────────────────────────────────────
 
-const Column = styled.div<{ $isOver?: boolean }>`
+const Column = styled.div<{ $isOver?: boolean; $isHiddenOnMobile?: boolean }>`
   display: flex;
   flex-direction: column;
   width: 280px;
   min-width: 280px;
   max-height: 100%;
-  background: ${(p) => (p.$isOver ? p.theme.colors.bgHover : p.theme.colors.bgSecondary)};
-  border-radius: 10px;
+  background: ${(p) => (p.$isOver ? p.theme.colors.bgHover : p.theme.colors.bgSecondary + '66')};
+  border-radius: 12px;
   border: 1px solid ${(p) => p.theme.colors.border};
-  transition: background 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    display: ${(p) => (p.$isHiddenOnMobile ? 'none' : 'flex')};
+    width: 100%;
+    min-width: 100%;
+    border: none;
+    background: transparent;
+  }
 `;
 
 const ColumnHeader = styled.div<{ $color: string }>`
@@ -57,11 +65,14 @@ const ColumnCount = styled.span`
 const ColumnBody = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 80px;
+  gap: 10px;
+  min-height: 100px;
+  scrollbar-width: thin;
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: ${(p) => p.theme.colors.border}; border-radius: 10px; }
 `;
 
 // ─── Card ────────────────────────────────────────────────────────────────────
@@ -69,16 +80,21 @@ const ColumnBody = styled.div`
 const Card = styled.div<{ $isDragging?: boolean; $selected?: boolean }>`
   background: ${(p) => (p.$selected ? p.theme.colors.bgHover : p.theme.colors.bgCard)};
   border: 1px solid ${(p) => (p.$selected ? p.theme.colors.primary : p.theme.colors.border)};
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 10px;
+  padding: 12px 14px;
   cursor: pointer;
   opacity: ${(p) => (p.$isDragging ? 0.4 : 1)};
-  transition: border-color 0.1s, box-shadow 0.1s;
-  box-shadow: ${(p) => (p.$isDragging ? p.theme.shadows.md : 'none')};
+  transition: all 0.18s ease-out;
+  box-shadow: ${(p) => (p.$isDragging ? p.theme.shadows.lg : '0 1px 2px rgba(0,0,0,0.05)')};
 
   &:hover {
-    border-color: ${(p) => p.theme.colors.borderHover};
-    box-shadow: ${(p) => p.theme.shadows.sm};
+    border-color: ${(p) => (p.$selected ? p.theme.colors.primary : p.theme.colors.borderHover)};
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  @media (max-width: 640px) {
+    padding: 14px;
   }
 `;
 
@@ -178,13 +194,14 @@ interface ColumnProps {
   tasks: TaskopsTask[];
   selectedTaskId?: string | null;
   onTaskClick?: (taskId: string) => void;
+  $isHiddenOnMobile?: boolean;
 }
 
-export function DroppableColumn({ status, tasks, selectedTaskId, onTaskClick }: ColumnProps) {
+export function DroppableColumn({ status, tasks, selectedTaskId, onTaskClick, $isHiddenOnMobile }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
-    <Column $isOver={isOver}>
+    <Column $isOver={isOver} $isHiddenOnMobile={$isHiddenOnMobile}>
       <ColumnHeader $color={STATUS_COLORS[status]}>
         <ColumnDot $color={STATUS_COLORS[status]} />
         <ColumnTitle>{STATUS_LABELS[status]}</ColumnTitle>

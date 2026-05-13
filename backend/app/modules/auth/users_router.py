@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from passlib.context import CryptContext
@@ -7,7 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import CurrentUser, get_current_user, require_roles
+from app.middleware.auth import get_current_user, require_roles
+from app.models.role import Role
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
@@ -71,6 +72,10 @@ async def create_user(
     _: User = Depends(require_roles("superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
+    role_exists = await db.execute(select(Role).where(Role.name == body.role))
+    if not role_exists.scalar_one_or_none():
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Роль '{body.role}' не существует")
+
     user = User(
         username=body.username,
         email=body.email,
@@ -110,7 +115,12 @@ async def update_user(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(404, "User not found")
-    for k, v in body.model_dump(exclude_none=True).items():
+    data = body.model_dump(exclude_none=True)
+    if "role" in data:
+        role_exists = await db.execute(select(Role).where(Role.name == data["role"]))
+        if not role_exists.scalar_one_or_none():
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Роль '{data['role']}' не существует")
+    for k, v in data.items():
         setattr(user, k, v)
     await db.commit()
     await db.refresh(user)
@@ -127,5 +137,5 @@ async def delete_user(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(404, "User not found")
-    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_at = datetime.now(UTC)
     await db.commit()

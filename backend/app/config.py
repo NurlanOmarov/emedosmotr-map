@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_USERNAME: str = ""
 
     DEBUG: bool = False
+    SENTRY_DSN: str = ""
     ALLOWED_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176"]
 
     MEDIA_ROOT: str = "./media"

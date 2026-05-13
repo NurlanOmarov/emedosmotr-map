@@ -2,6 +2,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styled, { useTheme } from 'styled-components';
+import { 
+  LuCircle, 
+  LuUser, 
+  LuZap, 
+  LuClock, 
+  LuCheck, 
+  LuCircleX,
+  LuWrench,
+  LuGlobe,
+  LuBookOpen,
+  LuSearch,
+  LuUpload,
+  LuSettings,
+  LuClipboardList,
+  LuBuilding2,
+  LuCalendar
+} from 'react-icons/lu';
 import { tasksApi } from '@/services/api';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { TaskModal } from '@/components/shared/TaskModal';
@@ -179,23 +196,23 @@ const AssigneeChip = styled.span`
   }
 `;
 
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  new: '🆕 Новая',
-  assigned: '👤 Назначена',
-  in_progress: '⚡ В работе',
-  waiting: '⏳ Ожидание',
-  done: '✅ Завершена',
-  cancelled: '❌ Отменена',
+const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: React.ReactNode }> = {
+  new: { label: 'Новая', icon: <LuCircle size={12} /> },
+  assigned: { label: 'Назначена', icon: <LuUser size={12} /> },
+  in_progress: { label: 'В работе', icon: <LuZap size={12} /> },
+  waiting: { label: 'Ожидание', icon: <LuClock size={12} /> },
+  done: { label: 'Завершена', icon: <LuCheck size={12} /> },
+  cancelled: { label: 'Отменена', icon: <LuCircleX size={12} /> },
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  equipment_setup: '🔧 Оборудование',
-  internet_setup: '🌐 Интернет',
-  training: '📚 Обучение',
-  inspection: '🔍 Инспекция',
-  data_upload: '📤 Загрузка данных',
-  maintenance: '🛠️ Обслуживание',
-  other: '📋 Другое',
+const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
+  equipment_setup: { label: 'Оборудование', icon: <LuWrench size={12} /> },
+  internet_setup: { label: 'Интернет', icon: <LuGlobe size={12} /> },
+  training: { label: 'Обучение', icon: <LuBookOpen size={12} /> },
+  inspection: { label: 'Инспекция', icon: <LuSearch size={12} /> },
+  data_upload: { label: 'Загрузка данных', icon: <LuUpload size={12} /> },
+  maintenance: { label: 'Обслуживание', icon: <LuSettings size={12} /> },
+  other: { label: 'Другое', icon: <LuClipboardList size={12} /> },
 };
 
 const FILTER_TABS = [
@@ -290,23 +307,32 @@ export function TasksPage() {
               <TaskInfo>
                 <TaskTitle>{task.title}</TaskTitle>
                 <TaskMeta>
-                  <StatusChip $status={task.status}>{STATUS_LABELS[task.status]}</StatusChip>
+                  <StatusChip $status={task.status} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {STATUS_CONFIG[task.status]?.icon}
+                    <span>{STATUS_CONFIG[task.status]?.label ?? task.status}</span>
+                  </StatusChip>
                   
                   <ObjectBadge $isGeneral={!task.location_id}>
-                    {task.location_id ? `🏢 ${task.location_name || 'Объект'}` : '🌐 Общая задача'}
+                    {task.location_id ? <LuBuilding2 size={11} /> : <LuGlobe size={11} />}
+                    <span>{task.location_id ? (task.location_name || 'Объект') : 'Общая задача'}</span>
                   </ObjectBadge>
 
                   {task.assignee_name && (
                     <AssigneeChip>
-                      👤 {task.assignee_name}
+                      <LuUser size={11} />
+                      <span>{task.assignee_name}</span>
                     </AssigneeChip>
                   )}
 
-                  <MetaChip>{TYPE_LABELS[task.type] || task.type}</MetaChip>
+                  <MetaChip style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {TYPE_CONFIG[task.type]?.icon || <LuClipboardList size={12} />}
+                    <span>{TYPE_CONFIG[task.type]?.label || task.type}</span>
+                  </MetaChip>
                   
                   {task.due_date && (
-                    <MetaChip>
-                      📅 {new Date(task.due_date).toLocaleDateString('ru-RU')}
+                    <MetaChip style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <LuCalendar size={12} />
+                      <span>{new Date(task.due_date).toLocaleDateString('ru-RU')}</span>
                     </MetaChip>
                   )}
                 </TaskMeta>
@@ -332,7 +358,8 @@ export function TasksPage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  ✓ Завершить
+                  <LuCheck size={14} />
+                  <span>Завершить</span>
                 </motion.button>
               )}
             </TaskCard>
@@ -345,7 +372,7 @@ export function TasksPage() {
             animate={{ opacity: 1 }}
             style={{ textAlign: 'center', padding: 60, color: theme.colors.textSecondary }}
           >
-            <div style={{ fontSize: 40, marginBottom: 16 }}>📋</div>
+            <div style={{ marginBottom: 16, color: theme.colors.textMuted }}><LuClipboardList size={48} /></div>
             <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textMuted }}>Задач не найдено</div>
             <div style={{ fontSize: 13, marginTop: 8 }}>
               {statusFilter ? 'Попробуйте другой фильтр' : 'Новые задачи появятся здесь'}

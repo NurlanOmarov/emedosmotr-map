@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
-import { geoApi } from '@/services/api';
+import { geoApi, rolesApi } from '@/services/api';
 import { Button } from '@/components/ui/Button';
-import { User, Region } from '@/types';
+import { User, Region, Role } from '@/types';
 import { motion } from 'framer-motion';
 
 const Overlay = styled(motion.div)`
@@ -58,6 +59,7 @@ const Input = styled.input`
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   transition: all 0.2s;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
@@ -87,6 +89,69 @@ const ErrorMsg = styled.span`
   display: block;
 `;
 
+const RoleDot = styled.span<{ $color: string }>`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${({ $color }) => $color};
+  margin-right: 6px;
+  vertical-align: middle;
+`;
+
+const SelectedRoleInfo = styled.div`
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textMuted};
+`;
+
+const LocationTypeToggle = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+`;
+
+const LocationTypeBtn = styled.button<{ $active: boolean }>`
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.border};
+  background: ${({ $active, theme }) => $active ? theme.colors.primaryGlow : 'rgba(255,255,255,0.03)'};
+  color: ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.textSecondary};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const LocationTypeIcon = styled.span`
+  font-size: 16px;
+  flex-shrink: 0;
+`;
+
+const LocationTypeLabel = styled.div`
+  line-height: 1.3;
+`;
+
+const LocationTypeSub = styled.div`
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.7;
+  margin-top: 1px;
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: flex-end;
@@ -99,7 +164,7 @@ const schema = z.object({
   email: z.string().email('Неверный формат email'),
   password: z.string().min(8, 'Минимум 8 символов').optional().or(z.literal('')),
   full_name: z.string().min(1, 'Обязательное поле'),
-  role: z.string(),
+  role: z.string().min(1, 'Выберите роль'),
   region_id: z.coerce.number().nullable().optional(),
   is_active: z.boolean().default(true),
 });
@@ -114,7 +179,12 @@ interface Props {
 }
 
 export function UserForm({ user, onClose, onSubmit, isSubmitting }: Props) {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
+  const initialLocationType = user
+    ? (user.region_id ? 'region' : 'aup')
+    : 'region';
+  const [locationType, setLocationType] = useState<'region' | 'aup'>(initialLocationType);
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: user ? {
       username: user.username,
@@ -134,7 +204,20 @@ export function UserForm({ user, onClose, onSubmit, isSubmitting }: Props) {
     queryFn: () => geoApi.getRegions().then(res => res.data),
   });
 
-  const selectedRole = watch('role');
+  const { data: roles = [] } = useQuery<Role[]>({
+    queryKey: ['roles'],
+    queryFn: () => rolesApi.list().then(res => res.data),
+  });
+
+  const selectedRoleName = watch('role');
+  const selectedRole = roles.find((r) => r.name === selectedRoleName);
+
+  const handleLocationTypeChange = (type: 'region' | 'aup') => {
+    setLocationType(type);
+    if (type === 'aup') {
+      setValue('region_id', null);
+    }
+  };
 
   return (
     <Overlay
@@ -178,17 +261,55 @@ export function UserForm({ user, onClose, onSubmit, isSubmitting }: Props) {
           <FormGroup>
             <Label>Роль</Label>
             <Select {...register('role')}>
-              <option value="admin">Администратор</option>
-              <option value="superadmin">Суперадмин</option>
-              <option value="director">Директор</option>
-              <option value="regional_manager">Региональный менеджер</option>
-              <option value="engineer">Инженер</option>
-              <option value="analyst">Аналитик</option>
-              <option value="operator">Оператор</option>
+              {roles.length === 0 && (
+                <option value="">Загрузка ролей...</option>
+              )}
+              {roles.map((role) => (
+                <option key={role.name} value={role.name}>
+                  {role.display_name}
+                </option>
+              ))}
             </Select>
+            {errors.role && <ErrorMsg>{errors.role.message}</ErrorMsg>}
+            {selectedRole && (
+              <SelectedRoleInfo>
+                <RoleDot $color={selectedRole.color} />
+                {selectedRole.description || selectedRole.display_name}
+                {' · '}
+                {selectedRole.permissions.length} функций
+              </SelectedRoleInfo>
+            )}
           </FormGroup>
 
-          {selectedRole === 'regional_manager' && (
+          <FormGroup>
+            <Label>Место работы</Label>
+            <LocationTypeToggle>
+              <LocationTypeBtn
+                type="button"
+                $active={locationType === 'region'}
+                onClick={() => handleLocationTypeChange('region')}
+              >
+                <LocationTypeIcon>🗺️</LocationTypeIcon>
+                <LocationTypeLabel>
+                  Регион
+                  <LocationTypeSub>Привязан к региону</LocationTypeSub>
+                </LocationTypeLabel>
+              </LocationTypeBtn>
+              <LocationTypeBtn
+                type="button"
+                $active={locationType === 'aup'}
+                onClick={() => handleLocationTypeChange('aup')}
+              >
+                <LocationTypeIcon>🏢</LocationTypeIcon>
+                <LocationTypeLabel>
+                  АУП
+                  <LocationTypeSub>Центральный офис</LocationTypeSub>
+                </LocationTypeLabel>
+              </LocationTypeBtn>
+            </LocationTypeToggle>
+          </FormGroup>
+
+          {locationType === 'region' && (
             <FormGroup>
               <Label>Регион</Label>
               <Select {...register('region_id')}>

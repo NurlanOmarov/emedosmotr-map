@@ -90,6 +90,27 @@ export const GlobalStyles = createGlobalStyle`
     border: 1px solid ${({ theme }) => theme.colors.glassBorder};
   }
 
+  /* Global focus-visible — единый стиль для клавиатурной навигации */
+  :focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Убираем outline при кликах мышью */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Respect reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   .hide-mobile {
     @media (max-width: 640px) {
       display: none !important;

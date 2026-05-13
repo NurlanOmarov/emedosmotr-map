@@ -1,12 +1,11 @@
 import os
-import glob
 import re
 
 for root, _, files in os.walk("app"):
     for file in files:
         if file.endswith(".py"):
             path = os.path.join(root, file)
-            with open(path, "r") as f:
+            with open(path) as f:
                 content = f.read()
             
             # replace _: CurrentUser = Depends() with _: CurrentUser

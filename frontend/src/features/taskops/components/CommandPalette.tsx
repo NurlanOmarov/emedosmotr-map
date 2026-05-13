@@ -1,381 +1,203 @@
-import { useEffect, useRef, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { useProjects, useCreateTask } from '../api';
+import { useEffect, useState } from 'react';
+import styled from 'styled-components';
+import { LuUser } from 'react-icons/lu';
+import { useProjectTasks } from '../api';
 import { useTaskopsStore } from '../store/useTaskopsStore';
-import type { TaskopsProject } from '../types';
-
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
-
-const slideUp = keyframes`
-  from { opacity: 0; transform: scale(0.97) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-`;
+import { useSearchParams } from 'react-router-dom';
+import { StatusBadge } from './StatusBadge';
 
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 15vh;
-  z-index: 500;
-  animation: ${fadeIn} 0.1s ease;
+  padding-top: 100px;
 `;
 
-const Dialog = styled.div`
-  width: 560px;
-  max-height: 460px;
-  background: ${(p) => p.theme.colors.bgCard};
+const Palette = styled.div`
+  width: 600px;
+  max-width: 90vw;
+  background: ${(p) => p.theme.mode === 'dark' ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)'};
+  backdrop-filter: blur(12px);
   border: 1px solid ${(p) => p.theme.colors.border};
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: ${(p) => p.theme.shadows.lg};
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  animation: ${slideUp} 0.15s ease;
-`;
+  animation: fadeInDown 0.2s ease-out;
 
-const SearchRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid ${(p) => p.theme.colors.border};
-`;
-
-const SearchIcon = styled.span`
-  font-size: 16px;
-  flex-shrink: 0;
-  color: ${(p) => p.theme.colors.textSecondary};
-`;
-
-const SearchInput = styled.input`
-  flex: 1;
-  background: none;
-  border: none;
-  font-size: 15px;
-  color: ${(p) => p.theme.colors.textPrimary};
-  outline: none;
-  &::placeholder { color: ${(p) => p.theme.colors.textSecondary}; }
-`;
-
-const Results = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 6px;
-`;
-
-const Section = styled.div`
-  margin-bottom: 4px;
-`;
-
-const SectionLabel = styled.div`
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: ${(p) => p.theme.colors.textSecondary};
-  padding: 6px 10px 2px;
-`;
-
-const Item = styled.button<{ $active?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-  background: ${(p) => (p.$active ? p.theme.colors.bgHover : 'transparent')};
-  color: ${(p) => p.theme.colors.textPrimary};
-  font-size: 13px;
-  transition: background 0.1s;
-
-  &:hover {
-    background: ${(p) => p.theme.colors.bgHover};
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 `;
 
-const ItemIcon = styled.span`
-  font-size: 15px;
-  flex-shrink: 0;
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid ${(p) => p.theme.colors.border};
+  color: ${(p) => p.theme.colors.textPrimary};
+  outline: none;
+  &::placeholder { color: ${(p) => p.theme.colors.textSecondary}; opacity: 0.6; }
 `;
 
-const ItemText = styled.span`
+const ResultsList = styled.div`
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px;
+`;
+
+const ResultItem = styled.div<{ $active: boolean }>`
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  background: ${(p) => p.$active ? p.theme.colors.bgHover : 'transparent'};
+  color: ${(p) => p.$active ? p.theme.colors.textPrimary : p.theme.colors.textSecondary};
+  transition: all 0.1s;
+  &:hover { background: ${(p) => p.theme.colors.bgHover}; }
+`;
+
+const ResultTitle = styled.div`
   flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: ${(p) => p.theme.colors.textPrimary};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
 
-const ItemHint = styled.span`
+const Hint = styled.div`
+  padding: 8px 16px;
   font-size: 11px;
   color: ${(p) => p.theme.colors.textSecondary};
-`;
-
-const KbdRow = styled.div`
+  border-top: 1px solid ${(p) => p.theme.colors.border};
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  border-top: 1px solid ${(p) => p.theme.colors.border};
+  background: ${(p) => p.theme.colors.bgSecondary};
 `;
 
-const Kbd = styled.span`
+const Kbd = styled.kbd`
+  background: ${(p) => p.theme.colors.bgCard};
+  border: 1px solid ${(p) => p.theme.colors.border};
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: inherit;
   font-size: 10px;
-  color: ${(p) => p.theme.colors.textSecondary};
-  background: ${(p) => p.theme.colors.bgSecondary};
-  border: 1px solid ${(p) => p.theme.colors.border};
-  border-radius: 4px;
-  padding: 2px 6px;
-  margin-left: 4px;
+  margin: 0 2px;
 `;
-
-const KbdGroup = styled.span`
-  font-size: 11px;
-  color: ${(p) => p.theme.colors.textSecondary};
-`;
-
-// ─── Quick-create form (shown when typing "new task") ─────────────────────
-
-const CreateForm = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-top: 1px solid ${(p) => p.theme.colors.border};
-`;
-
-const CreateInput = styled.input`
-  width: 100%;
-  background: ${(p) => p.theme.colors.bgSecondary};
-  color: ${(p) => p.theme.colors.textPrimary};
-  border: 1px solid ${(p) => p.theme.colors.border};
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13px;
-  box-sizing: border-box;
-  &:focus { outline: none; border-color: ${(p) => p.theme.colors.primary}; }
-`;
-
-const ProjectSelect = styled.select`
-  width: 100%;
-  background: ${(p) => p.theme.colors.bgSecondary};
-  color: ${(p) => p.theme.colors.textPrimary};
-  border: 1px solid ${(p) => p.theme.colors.border};
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  box-sizing: border-box;
-`;
-
-const CreateBtn = styled.button`
-  background: ${(p) => p.theme.colors.primary};
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 9px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  &:disabled { opacity: 0.5; }
-`;
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
+  projectId?: string;
 }
 
-type CommandMode = 'search' | 'create-task';
-
-export function CommandPalette({ open, onClose }: Props) {
-  const [query, setQuery] = useState('');
-  const [mode, setMode] = useState<CommandMode>('search');
+export function CommandPalette({ open: controlledOpen, onClose: controlledClose, projectId }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [q, setQ] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const [newTitle, setNewTitle] = useState('');
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const titleRef = useRef<HTMLInputElement>(null);
-
-  const { data: projects = [] } = useProjects();
-  const { setActiveProject } = useTaskopsStore();
-  const createTask = useCreateTask(selectedProjectId);
-
-  useEffect(() => {
-    if (open) {
-      setQuery('');
-      setMode('search');
-      setActiveIndex(0);
-      setNewTitle('');
-      setSelectedProjectId(projects[0]?.id ?? '');
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [open]);
-
-  // Always set default project when projects load
-  useEffect(() => {
-    if (projects.length > 0 && !selectedProjectId) {
-      setSelectedProjectId(projects[0].id);
-    }
-  }, [projects]);
-
-  const filteredProjects: TaskopsProject[] = query
-    ? projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
-    : projects.slice(0, 5);
-
-  const staticCommands = [
-    { id: 'create-task', icon: '➕', label: 'Создать задачу', hint: 'C', action: () => { setMode('create-task'); setTimeout(() => titleRef.current?.focus(), 50); } },
-    { id: 'inbox', icon: '📥', label: 'Перейти в Мои задачи', hint: 'G I', action: () => { setActiveProject(null); onClose(); } },
-  ].filter((c) => !query || c.label.toLowerCase().includes(query.toLowerCase()));
-
-  const allItems = [
-    ...staticCommands.map((c) => ({ ...c, type: 'command' as const })),
-    ...filteredProjects.map((p) => ({
-      id: p.id,
-      icon: '📋',
-      label: p.name,
-      hint: '',
-      type: 'project' as const,
-      action: () => { setActiveProject(p.id); onClose(); },
-    })),
-  ];
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') { onClose(); return; }
-    if (mode === 'search') {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((i) => Math.min(i + 1, allItems.length - 1)); }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex((i) => Math.max(i - 1, 0)); }
-      if (e.key === 'Enter' && allItems[activeIndex]) { allItems[activeIndex].action(); }
-      if (e.key === 'c' && !query) { setMode('create-task'); setTimeout(() => titleRef.current?.focus(), 50); }
+  const { openSidePanel } = useTaskopsStore();
+  const [, setSearchParams] = useSearchParams();
+  
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setIsOpen = (val: boolean) => {
+    if (controlledClose !== undefined) {
+      if (!val) controlledClose();
+    } else {
+      setInternalOpen(val);
     }
   };
 
-  const handleCreateTask = () => {
-    if (!newTitle.trim() || !selectedProjectId) return;
-    createTask.mutate(
-      { title: newTitle.trim() },
-      {
-        onSuccess: () => {
-          setActiveProject(selectedProjectId);
-          onClose();
-        },
+  // Search only in current project if provided
+  const { data: results } = useProjectTasks(projectId || '', { q, per_page: 10 }, { enabled: !!projectId && isOpen });
+  const items = results?.items ?? [];
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsOpen(true);
       }
-    );
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleSelect = (id: string) => {
+    openSidePanel(id);
+    setSearchParams({ task: id });
+    setIsOpen(false);
+    setQ('');
   };
 
-  if (!open) return null;
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev + 1) % (items.length || 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev - 1 + items.length) % (items.length || 1));
+    } else if (e.key === 'Enter' && items[activeIndex]) {
+      handleSelect(items[activeIndex].id);
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
-    <Overlay onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <Dialog>
-        <SearchRow>
-          <SearchIcon>🔍</SearchIcon>
-          {mode === 'search' ? (
-            <SearchInput
-              ref={inputRef}
-              placeholder="Поиск проектов, команды... или нажмите C для задачи"
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
-              onKeyDown={handleKeyDown}
-            />
-          ) : (
-            <SearchInput
-              value="Создание задачи"
-              readOnly
-              style={{ color: '#9ca3af', cursor: 'default' }}
-            />
+    <Overlay onClick={() => setIsOpen(false)}>
+      <Palette onClick={(e) => e.stopPropagation()}>
+        <SearchInput
+          autoFocus
+          placeholder="Поиск задач в проекте..."
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setActiveIndex(0); }}
+          onKeyDown={onKeyDown}
+        />
+        <ResultsList>
+          {items.length === 0 && q && (
+            <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
+              Ничего не найдено
+            </div>
           )}
-        </SearchRow>
-
-        {mode === 'search' && (
-          <Results>
-            {staticCommands.length > 0 && (
-              <Section>
-                <SectionLabel>Действия</SectionLabel>
-                {staticCommands.map((cmd, idx) => (
-                  <Item key={cmd.id} $active={activeIndex === idx} onClick={cmd.action}>
-                    <ItemIcon>{cmd.icon}</ItemIcon>
-                    <ItemText>{cmd.label}</ItemText>
-                    {cmd.hint && <Kbd>{cmd.hint}</Kbd>}
-                  </Item>
-                ))}
-              </Section>
-            )}
-
-            {filteredProjects.length > 0 && (
-              <Section>
-                <SectionLabel>Проекты</SectionLabel>
-                {filteredProjects.map((p, idx) => (
-                  <Item
-                    key={p.id}
-                    $active={activeIndex === staticCommands.length + idx}
-                    onClick={() => { setActiveProject(p.id); onClose(); }}
-                  >
-                    <ItemIcon>📋</ItemIcon>
-                    <ItemText>{p.name}</ItemText>
-                    <ItemHint>{p.is_external ? 'внешний' : ''}</ItemHint>
-                  </Item>
-                ))}
-              </Section>
-            )}
-
-            {allItems.length === 0 && (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
-                Ничего не найдено
-              </div>
-            )}
-          </Results>
-        )}
-
-        {mode === 'create-task' && (
-          <CreateForm>
-            <CreateInput
-              ref={titleRef}
-              placeholder="Название задачи"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') { setMode('search'); setQuery(''); }
-                if (e.key === 'Enter') handleCreateTask();
-              }}
-            />
-            <ProjectSelect
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+          {items.map((item, idx) => (
+            <ResultItem 
+              key={item.id} 
+              $active={idx === activeIndex}
+              onClick={() => handleSelect(item.id)}
             >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </ProjectSelect>
-            <CreateBtn
-              onClick={handleCreateTask}
-              disabled={!newTitle.trim() || !selectedProjectId || createTask.isPending}
-            >
-              {createTask.isPending ? 'Создание...' : 'Создать задачу (Enter)'}
-            </CreateBtn>
-          </CreateForm>
-        )}
-
-        <KbdRow>
-          <KbdGroup>
-            <Kbd>↑↓</Kbd> выбор
-            <Kbd>Enter</Kbd> открыть
-            <Kbd>Esc</Kbd> закрыть
-          </KbdGroup>
-          <KbdGroup>
-            <Kbd>C</Kbd> создать задачу
-          </KbdGroup>
-        </KbdRow>
-      </Dialog>
+              <StatusBadge status={item.status} />
+              <ResultTitle>{item.title}</ResultTitle>
+              {item.assignee_name && (
+                <span style={{ fontSize: 11, opacity: 0.6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <LuUser size={12} /> {item.assignee_name}
+                </span>
+              )}
+            </ResultItem>
+          ))}
+        </ResultsList>
+        <Hint>
+          <div>
+            Навигация: <Kbd>↑</Kbd> <Kbd>↓</Kbd>, Выбор: <Kbd>Enter</Kbd>
+          </div>
+          <div>
+            Закрыть: <Kbd>Esc</Kbd>
+          </div>
+        </Hint>
+      </Palette>
     </Overlay>
   );
 }

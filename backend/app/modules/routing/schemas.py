@@ -1,5 +1,6 @@
-from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class Coordinate(BaseModel):
     lat: float
@@ -11,18 +12,18 @@ class RouteRequest(BaseModel):
     optimize: bool = False
 
 class MultiStopRouteRequest(BaseModel):
-    waypoints: List[Coordinate]
+    waypoints: list[Coordinate]
     optimize: bool = True
 
 class RouteResponse(BaseModel):
     distance_meters: float
     duration_seconds: float
-    geometry: Optional[List[List[float]]] = None
+    geometry: list[list[float]] | None = None
     provider: str
 
 class RoutingMatrixRequest(BaseModel):
-    origins: List[Coordinate]
-    destinations: List[Coordinate]
+    origins: list[Coordinate]
+    destinations: list[Coordinate]
 
 class MatrixElement(BaseModel):
     distance_meters: float
@@ -30,4 +31,4 @@ class MatrixElement(BaseModel):
     status: str = "ok"
 
 class RoutingMatrixResponse(BaseModel):
-    rows: List[List[MatrixElement]]
+    rows: list[list[MatrixElement]]

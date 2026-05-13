@@ -1,13 +1,14 @@
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, update, desc
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
-from app.models.user import User
 from app.models.notification import Notification
-from app.schemas.notification import NotificationResponse, NotificationMarkRead
+from app.models.user import User
+from app.schemas.notification import NotificationMarkRead, NotificationResponse
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -60,7 +61,7 @@ async def mark_all_notifications_read(
     """Mark all notifications as read for the current user."""
     q = (
         update(Notification)
-        .where(Notification.user_id == current_user.id, Notification.is_read == False)
+        .where(Notification.user_id == current_user.id, ~Notification.is_read)
         .values(is_read=True)
     )
     await db.execute(q)

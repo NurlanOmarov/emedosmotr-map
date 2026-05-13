@@ -1,7 +1,9 @@
 import asyncio
+
 from app.celery_app import celery_app
 from app.database import AsyncSessionLocal
 from app.modules.routing.service import routing_service
+
 
 @celery_app.task
 def invalidate_route_cache_task():

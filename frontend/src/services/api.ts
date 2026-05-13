@@ -169,3 +169,14 @@ export const districtAccountsApi = {
   bulkDelete: (ids: number[]) => api.post('/district-accounts/bulk-delete', ids),
   clear: (settlementId: number) => api.delete(`/district-accounts/settlement/${settlementId}`),
 };
+
+// Roles
+export const rolesApi = {
+  list: () => api.get('/admin/roles'),
+  get: (name: string) => api.get(`/admin/roles/${name}`),
+  create: (data: unknown) => api.post('/admin/roles', data),
+  update: (name: string, data: unknown) => api.put(`/admin/roles/${name}`, data),
+  delete: (name: string) => api.delete(`/admin/roles/${name}`),
+  listFeatures: () => api.get('/admin/roles/features'),
+  seed: () => api.post('/admin/roles/seed'),
+};

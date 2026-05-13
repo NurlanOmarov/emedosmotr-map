@@ -140,7 +140,7 @@ export function UserList() {
   };
 
   const getRegionName = (id: number | null) => {
-    if (!id) return 'Все регионы';
+    if (!id) return '🏢 АУП';
     return regions?.find((r: Region) => r.region_id === id)?.name || 'Неизвестно';
   };
 

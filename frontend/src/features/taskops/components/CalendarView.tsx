@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import type { TaskopsTask } from '../types';
 import { STATUS_COLORS } from '../types';
 
@@ -8,38 +8,79 @@ const Wrapper = styled.div`
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background: ${(p) => p.theme.colors.bg};
 `;
 
 const Header = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid ${(p) => p.theme.colors.border};
+  background: ${(p) => p.theme.colors.bgSecondary};
   flex-shrink: 0;
+  gap: 16px;
+
+  @media (max-width: 640px) {
+    padding: 12px 16px;
+    gap: 8px;
+  }
 `;
 
 const MonthTitle = styled.h2`
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   color: ${(p) => p.theme.colors.textPrimary};
   margin: 0;
   flex: 1;
+  text-transform: capitalize;
+`;
+
+const NavGroup = styled.div`
+  display: flex;
+  background: ${(p) => p.theme.colors.bgCard};
+  border: 1px solid ${(p) => p.theme.colors.border};
+  border-radius: 8px;
+  padding: 2px;
 `;
 
 const NavBtn = styled.button`
   background: none;
-  border: 1px solid ${(p) => p.theme.colors.border};
+  border: none;
   border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 14px;
+  padding: 6px 12px;
+  font-size: 16px;
   color: ${(p) => p.theme.colors.textSecondary};
   cursor: pointer;
-  &:hover { color: ${(p) => p.theme.colors.textPrimary}; background: ${(p) => p.theme.colors.bgHover}; }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+
+  &:hover {
+    background: ${(p) => p.theme.colors.bgHover};
+    color: ${(p) => p.theme.colors.textPrimary};
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 `;
 
-const TodayBtn = styled(NavBtn)`
-  font-size: 12px;
+const TodayBtn = styled.button`
+  background: ${(p) => p.theme.colors.bgCard};
+  border: 1px solid ${(p) => p.theme.colors.border};
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${(p) => p.theme.colors.textPrimary};
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: ${(p) => p.theme.colors.primary};
+    background: ${(p) => p.theme.colors.bgHover};
+  }
 `;
 
 const Grid = styled.div`
@@ -48,58 +89,101 @@ const Grid = styled.div`
   grid-template-columns: repeat(7, 1fr);
   grid-auto-rows: 1fr;
   overflow: hidden;
+  border-left: 1px solid ${(p) => p.theme.colors.border};
+  border-top: 1px solid ${(p) => p.theme.colors.border};
+
+  @media (max-width: 768px) {
+    grid-auto-rows: minmax(80px, 1fr);
+    overflow-y: auto;
+  }
 `;
 
 const DayHeader = styled.div`
-  padding: 6px 10px;
+  padding: 10px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   color: ${(p) => p.theme.colors.textSecondary};
   border-bottom: 1px solid ${(p) => p.theme.colors.border};
   border-right: 1px solid ${(p) => p.theme.colors.border};
   background: ${(p) => p.theme.colors.bgSecondary};
+  text-align: center;
 `;
 
 const DayCell = styled.div<{ $isToday?: boolean; $outside?: boolean }>`
-  padding: 6px 8px;
+  padding: 8px;
   border-right: 1px solid ${(p) => p.theme.colors.border};
   border-bottom: 1px solid ${(p) => p.theme.colors.border};
   overflow: hidden;
   background: ${(p) =>
-    p.$isToday ? `${p.theme.colors.primary}12` : 'transparent'};
-  opacity: ${(p) => (p.$outside ? 0.4 : 1)};
+    p.$isToday ? p.theme.colors.bg : 'transparent'};
+  opacity: ${(p) => (p.$outside ? 0.35 : 1)};
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: ${(p) => p.theme.colors.bgHover + '33'};
+  }
 `;
 
 const DayNum = styled.div<{ $isToday?: boolean }>`
-  font-size: 12px;
-  font-weight: ${(p) => (p.$isToday ? 700 : 400)};
+  font-size: 13px;
+  font-weight: ${(p) => (p.$isToday ? 800 : 500)};
   color: ${(p) => (p.$isToday ? p.theme.colors.primary : p.theme.colors.textSecondary)};
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  ${(p) =>
+    p.$isToday &&
+    css`
+      &::after {
+        content: 'Сегодня';
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: ${p.theme.colors.primary};
+        color: #fff;
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+    `}
 `;
 
 const TaskChip = styled.div<{ $color: string }>`
   font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: ${(p) => p.$color}30;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: ${(p) => p.$color}15;
   color: ${(p) => p.$color};
-  border-left: 2px solid ${(p) => p.$color};
+  border-left: 3px solid ${(p) => p.$color};
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   cursor: pointer;
-  &:hover { background: ${(p) => p.$color}50; }
+  transition: all 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+  &:hover {
+    background: ${(p) => p.$color}25;
+    transform: translateX(2px);
+  }
 `;
 
-const MORE = styled.div`
+const MoreTasks = styled.div`
   font-size: 10px;
+  font-weight: 700;
   color: ${(p) => p.theme.colors.textSecondary};
-  padding: 1px 4px;
+  padding: 2px 6px;
+  background: ${(p) => p.theme.colors.bgSecondary};
+  border-radius: 4px;
+  align-self: flex-start;
+  margin-top: 2px;
 `;
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -110,7 +194,7 @@ interface Props {
 }
 
 export function CalendarView({ tasks, onTaskClick }: Props) {
-  const [offset, setOffset] = useState(0); // months from today
+  const [offset, setOffset] = useState(0);
 
   const { year, month, days } = useMemo(() => {
     const base = new Date();
@@ -119,7 +203,6 @@ export function CalendarView({ tasks, onTaskClick }: Props) {
     const y = base.getFullYear();
     const m = base.getMonth();
 
-    // First day of month (0=Sun..6=Sat), normalize to Mon=0
     const firstDow = new Date(y, m, 1).getDay();
     const startOffset = firstDow === 0 ? 6 : firstDow - 1;
     const daysInMonth = new Date(y, m + 1, 0).getDate();
@@ -161,10 +244,12 @@ export function CalendarView({ tasks, onTaskClick }: Props) {
   return (
     <Wrapper>
       <Header>
-        <NavBtn onClick={() => setOffset((o) => o - 1)}>‹</NavBtn>
-        <MonthTitle style={{ textTransform: 'capitalize' }}>{monthName}</MonthTitle>
-        {offset !== 0 && <TodayBtn onClick={() => setOffset(0)}>Сегодня</TodayBtn>}
-        <NavBtn onClick={() => setOffset((o) => o + 1)}>›</NavBtn>
+        <MonthTitle>{monthName}</MonthTitle>
+        <TodayBtn onClick={() => setOffset(0)}>Сегодня</TodayBtn>
+        <NavGroup>
+          <NavBtn onClick={() => setOffset((o) => o - 1)}>‹</NavBtn>
+          <NavBtn onClick={() => setOffset((o) => o + 1)}>›</NavBtn>
+        </NavGroup>
       </Header>
 
       <Grid>
@@ -180,7 +265,7 @@ export function CalendarView({ tasks, onTaskClick }: Props) {
           return (
             <DayCell key={i} $isToday={isToday} $outside={cell.outside}>
               <DayNum $isToday={isToday}>{cell.date.getDate()}</DayNum>
-              {cellTasks.slice(0, 3).map((t) => (
+              {cellTasks.slice(0, 4).map((t) => (
                 <TaskChip
                   key={t.id}
                   $color={STATUS_COLORS[t.status]}
@@ -190,8 +275,8 @@ export function CalendarView({ tasks, onTaskClick }: Props) {
                   {t.title}
                 </TaskChip>
               ))}
-              {cellTasks.length > 3 && (
-                <MORE>+{cellTasks.length - 3} ещё</MORE>
+              {cellTasks.length > 4 && (
+                <MoreTasks>+{cellTasks.length - 4} ещё</MoreTasks>
               )}
             </DayCell>
           );
@@ -200,3 +285,4 @@ export function CalendarView({ tasks, onTaskClick }: Props) {
     </Wrapper>
   );
 }
+

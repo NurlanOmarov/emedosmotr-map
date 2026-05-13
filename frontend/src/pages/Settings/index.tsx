@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
+import { 
+  LuDatabase, 
+  LuChartBar, 
+  LuInfo, 
+  LuDownload, 
+  LuCheck 
+} from 'react-icons/lu';
 import api from '@/services/api';
 
 const Page = styled.div`
@@ -202,7 +209,7 @@ export function SettingsPage() {
       {/* Database backup */}
       <Section>
         <SectionHeader>
-          <span style={{ fontSize: 18 }}>🗄️</span>
+          <LuDatabase size={18} style={{ color: '#3b82f6' }} />
           <SectionTitle>База данных</SectionTitle>
           {dbInfo && (
             <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>
@@ -223,9 +230,9 @@ export function SettingsPage() {
               {backupLoading ? (
                 <><Spinner /> Создаётся...</>
               ) : backupDone ? (
-                <>✓ Скачано</>
+                <><LuCheck size={14} /> Скачано</>
               ) : (
-                <>⬇ Скачать бэкап</>
+                <><LuDownload size={14} /> Скачать бэкап</>
               )}
             </BackupBtn>
           </Row>
@@ -266,7 +273,7 @@ export function SettingsPage() {
       {/* Tables list */}
       <Section>
         <SectionHeader>
-          <span style={{ fontSize: 18 }}>📊</span>
+          <LuChartBar size={18} style={{ color: '#10b981' }} />
           <SectionTitle>Таблицы</SectionTitle>
         </SectionHeader>
         <SectionBody>
@@ -287,7 +294,7 @@ export function SettingsPage() {
       {/* System info */}
       <Section>
         <SectionHeader>
-          <span style={{ fontSize: 18 }}>ℹ️</span>
+          <LuInfo size={18} style={{ color: '#6366f1' }} />
           <SectionTitle>О системе</SectionTitle>
         </SectionHeader>
         <SectionBody>

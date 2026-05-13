@@ -1,19 +1,27 @@
 import uuid
 from datetime import date, datetime
+from enum import StrEnum
 
 from sqlalchemy import (
-    Boolean, DateTime, Date, ForeignKey, Integer, String, Text, func,
-    UniqueConstraint, Enum as SAEnum
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
-import enum
 
-
-class TaskStatus(str, enum.Enum):
+class TaskStatus(StrEnum):
     backlog = "backlog"
     todo = "todo"
     in_progress = "in_progress"
@@ -22,32 +30,30 @@ class TaskStatus(str, enum.Enum):
     cancelled = "cancelled"
 
 
-class TaskPriority(str, enum.Enum):
+class TaskPriority(StrEnum):
     p0_urgent = "p0_urgent"
     p1_high = "p1_high"
     p2_medium = "p2_medium"
     p3_low = "p3_low"
 
 
-class DependencyType(str, enum.Enum):
+class DependencyType(StrEnum):
     blocks = "blocks"
     blocked_by = "blocked_by"
     relates_to = "relates_to"
 
 
-class EstimateType(str, enum.Enum):
+class EstimateType(StrEnum):
     t_shirt = "t_shirt"
     hours = "hours"
 
 
-class ProjectMemberRole(str, enum.Enum):
+class ProjectMemberRole(StrEnum):
     owner = "owner"
     writer = "writer"
     reader = "reader"
 
 
-# Association table for task <-> label (many-to-many)
-from sqlalchemy import Table, Column
 taskops_task_labels = Table(
     "taskops_task_labels",
     Base.metadata,
@@ -65,7 +71,7 @@ class TaskopsProject(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
     is_external: Mapped[bool] = mapped_column(Boolean, default=False)
     estimate_type: Mapped[str] = mapped_column(
-        SAEnum(EstimateType, name="taskops_estimate_type"), nullable=False, default=EstimateType.t_shirt
+        String(30), nullable=False, default=EstimateType.t_shirt
     )
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
@@ -101,7 +107,7 @@ class TaskopsProjectMember(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role: Mapped[str] = mapped_column(
-        SAEnum(ProjectMemberRole, name="taskops_project_member_role"),
+        String(20),
         nullable=False,
         default=ProjectMemberRole.reader,
     )
@@ -161,10 +167,10 @@ class TaskopsTask(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
-        SAEnum(TaskStatus, name="taskops_task_status"), nullable=False, default=TaskStatus.backlog
+        String(20), nullable=False, default=TaskStatus.backlog
     )
     priority: Mapped[str] = mapped_column(
-        SAEnum(TaskPriority, name="taskops_task_priority"), nullable=False, default=TaskPriority.p2_medium
+        String(20), nullable=False, default=TaskPriority.p2_medium
     )
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -218,6 +224,11 @@ class TaskopsTask(Base):
         foreign_keys="TaskopsDependency.target_task_id",
         cascade="all, delete-orphan",
     )
+    attachments: Mapped[list["TaskopsAttachment"]] = relationship(
+        "TaskopsAttachment",
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )
 
 
 class TaskopsComment(Base):
@@ -254,7 +265,7 @@ class TaskopsDependency(Base):
         UUID(as_uuid=True), ForeignKey("taskops_tasks.id", ondelete="CASCADE"), nullable=False
     )
     type: Mapped[str] = mapped_column(
-        SAEnum(DependencyType, name="taskops_dependency_type"), nullable=False
+        String(20), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -264,6 +275,26 @@ class TaskopsDependency(Base):
     target_task: Mapped["TaskopsTask"] = relationship(
         "TaskopsTask", back_populates="dependencies_incoming", foreign_keys=[target_task_id]
     )
+
+
+class TaskopsAttachment(Base):
+    __tablename__ = "taskops_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("taskops_tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(100))
+    file_size: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    task: Mapped["TaskopsTask"] = relationship("TaskopsTask", back_populates="attachments")
+    user: Mapped["User"] = relationship("User")  # noqa: F821
 
 
 class TaskopsAuditLog(Base):
@@ -281,6 +312,25 @@ class TaskopsAuditLog(Base):
     project_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     details: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TaskopsNote(Base):
+    __tablename__ = "taskops_notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(300), nullable=False, default="Без названия")
+    content: Mapped[str | None] = mapped_column(Text)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    owner: Mapped["User"] = relationship("User")  # noqa: F821
 
 
 class TaskopsGoal(Base):

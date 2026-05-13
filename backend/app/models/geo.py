@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text, func, ForeignKey
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from geoalchemy2 import Geometry
 
 from app.database import Base
 
@@ -23,6 +24,7 @@ class Region(Base):
     geometry_json: Mapped[dict | None] = mapped_column(JSONB)
     center_lat: Mapped[float | None] = mapped_column(Numeric)
     center_lon: Mapped[float | None] = mapped_column(Numeric)
+    geom: Mapped[Any | None] = mapped_column(Geometry("POLYGON", srid=4326), nullable=True)
 
     # Engineer info
     engineer_name: Mapped[str | None] = mapped_column(String(255))
@@ -30,8 +32,8 @@ class Region(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    oblast: Mapped["Oblast | None"] = relationship("Oblast", back_populates="regions")
-    settlements: Mapped[list["Settlement"]] = relationship("Settlement", back_populates="region")
+    oblast: Mapped[Oblast | None] = relationship("Oblast", back_populates="regions")
+    settlements: Mapped[list[Settlement]] = relationship("Settlement", back_populates="region")
 
 
 class Settlement(Base):
@@ -51,4 +53,4 @@ class Settlement(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    region: Mapped["Region"] = relationship("Region", back_populates="settlements")
+    region: Mapped[Region] = relationship("Region", back_populates="settlements")

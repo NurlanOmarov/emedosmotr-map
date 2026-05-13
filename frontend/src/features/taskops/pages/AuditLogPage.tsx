@@ -169,8 +169,18 @@ function formatTime(iso: string) {
 export function AuditLogPage() {
   const { data: projects = [] } = useProjects();
   const [selectedProject, setSelectedProject] = useState<string>('');
+  const [page, setPage] = useState(0);
+  const limit = 50;
 
-  const { data: entries = [], isLoading } = useAuditLog(selectedProject || undefined);
+  const { data, isLoading } = useAuditLog({
+    project_id: selectedProject || undefined,
+    limit,
+    offset: page * limit,
+  });
+
+  const entries = data?.items || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit);
 
   return (
     <Page>
@@ -178,7 +188,10 @@ export function AuditLogPage() {
         <PageTitle>Аудит-лог</PageTitle>
         <FilterSelect
           value={selectedProject}
-          onChange={(e) => setSelectedProject(e.target.value)}
+          onChange={(e) => {
+            setSelectedProject(e.target.value);
+            setPage(0);
+          }}
         >
           <option value="">Все проекты</option>
           {projects.map((p) => (
@@ -228,6 +241,58 @@ export function AuditLogPage() {
           </Row>
         ))}
       </Table>
+
+      {totalPages > 1 && (
+        <Pagination>
+          <PageBtn 
+            disabled={page === 0} 
+            onClick={() => setPage(p => p - 1)}
+          >
+            ← Назад
+          </PageBtn>
+          <PageInfo>
+            Страница {page + 1} из {totalPages}
+          </PageInfo>
+          <PageBtn 
+            disabled={page >= totalPages - 1} 
+            onClick={() => setPage(p => p + 1)}
+          >
+            Вперёд →
+          </PageBtn>
+        </Pagination>
+      )}
     </Page>
   );
 }
+
+const Pagination = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px;
+  border-top: 1px solid ${(p) => p.theme.colors.border};
+  background: ${(p) => p.theme.colors.bgCard};
+`;
+
+const PageBtn = styled.button`
+  background: ${(p) => p.theme.colors.bgSecondary};
+  border: 1px solid ${(p) => p.theme.colors.border};
+  color: ${(p) => p.theme.colors.textPrimary};
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:hover:not(:disabled) {
+    border-color: ${(p) => p.theme.colors.primary};
+  }
+`;
+
+const PageInfo = styled.span`
+  font-size: 12px;
+  color: ${(p) => p.theme.colors.textSecondary};
+`;

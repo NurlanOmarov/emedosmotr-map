@@ -1,10 +1,18 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+
 from app.database import get_db
-from app.modules.routing.schemas import RouteRequest, MultiStopRouteRequest, RouteResponse, RoutingMatrixRequest, RoutingMatrixResponse, MatrixElement
-from app.modules.routing.service import routing_service
 from app.middleware.auth import get_current_user
+from app.modules.routing.schemas import (
+    MatrixElement,
+    MultiStopRouteRequest,
+    RouteRequest,
+    RouteResponse,
+    RoutingMatrixRequest,
+    RoutingMatrixResponse,
+)
+from app.modules.routing.service import routing_service
 
 router = APIRouter(prefix="/routing", tags=["Logistics"])
 
@@ -16,7 +24,7 @@ async def get_distance(
 ):
     return await routing_service.get_route(db, req.origin, req.destination)
 
-@router.post("/multi-stop", response_model=List[RouteResponse])
+@router.post("/multi-stop", response_model=list[RouteResponse])
 async def get_multi_stop(
     req: MultiStopRouteRequest,
     db: AsyncSession = Depends(get_db),

@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
+import { 
+  LuPlus, 
+  LuCheck, 
+  LuPencil, 
+  LuTrash2, 
+  LuBuilding2, 
+  LuGlobe, 
+  LuUser, 
+  LuClock 
+} from 'react-icons/lu';
 import { tasksApi } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { 
@@ -130,12 +140,15 @@ export function TasksList({
         <SectionLabel>
           Список задач
         </SectionLabel>
-        <Button size="xs" variant="ghost" onClick={() => setIsAdding(true)}>+ Новая задача</Button>
+        <Button size="xs" variant="ghost" onClick={() => setIsAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <LuPlus size={14} />
+          <span>Новая задача</span>
+        </Button>
       </SectionHeader>
 
       {tasks.length === 0 ? (
         <EmptyTasks>
-          <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
+          <div style={{ marginBottom: 8, color: 'var(--ready)' }}><LuCheck size={32} /></div>
           <EmptyTitle>Нет открытых задач</EmptyTitle>
           <EmptySubtitle>Все задачи выполнены или ещё не созданы</EmptySubtitle>
         </EmptyTasks>
@@ -159,12 +172,12 @@ export function TasksList({
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button 
                           onClick={() => setEditingTask(task)}
-                          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, opacity: 0.6 }}
-                        >✏️</button>
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2, opacity: 0.6 }}
+                        ><LuPencil size={12} /></button>
                         <button 
                           onClick={() => { if(confirm('Удалить задачу?')) deleteMutation.mutate(task.id) }}
-                          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, opacity: 0.6 }}
-                        >🗑️</button>
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2, opacity: 0.6 }}
+                        ><LuTrash2 size={12} /></button>
                       </div>
                     )}
                   </div>
@@ -184,43 +197,47 @@ export function TasksList({
                       background: task.location_id ? 'var(--primary-glow)' : 'var(--bg-secondary)',
                       color: task.location_id ? 'var(--primary)' : 'var(--text-muted)',
                       border: `1px solid ${task.location_id ? 'var(--primary)' : 'var(--border)'}44`,
-                      textTransform: 'uppercase'
+                      textTransform: 'uppercase',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
                     }}>
-                      {task.location_id ? `🏢 ${task.location_name || 'Объект'}` : '🌐 Общая'}
+                      {task.location_id ? <LuBuilding2 size={10} /> : <LuGlobe size={10} />}
+                      {task.location_id ? (task.location_name || 'Объект') : 'Общая'}
                     </span>
                   )}
                   
                   {task.assignee_name && (
                     <span style={{ 
                       fontSize: 11, 
-                      color: props => props.theme.colors.textSecondary, 
+                      color: 'var(--text-secondary)', 
                       display: 'flex', 
                       alignItems: 'center', 
                       gap: 4, 
-                      background: props => props.theme.colors.bgSecondary, 
+                      background: 'var(--bg-secondary)', 
                       padding: '2px 8px', 
                       borderRadius: 10, 
-                      border: props => `1px solid ${props.theme.colors.border}` 
+                      border: '1px solid var(--border)' 
                     }}>
-                      👤 {task.assignee_name}
+                      <LuUser size={11} /> {task.assignee_name}
                     </span>
                   )}
 
                   {timeInfo && !isClosed && (
-                    <span style={{ fontSize: 11, color: timeInfo.color, fontWeight: 600 }}>
-                      ⏳ {timeInfo.label}
+                    <span style={{ fontSize: 11, color: timeInfo.color, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <LuClock size={11} /> {timeInfo.label}
                     </span>
                   )}
 
                   {task.due_date && (
-                    <span style={{ fontSize: 11, color: props => props.theme.colors.textMuted }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                       (до {new Date(task.due_date).toLocaleDateString('ru-RU')})
                     </span>
                   )}
                 </TaskMeta>
                 
                 {task.description && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: props => props.theme.colors.textSecondary, lineHeight: 1.5 }}>{task.description}</div>
+                  <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{task.description}</div>
                 )}
               </TaskCard>
             );

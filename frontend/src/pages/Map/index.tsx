@@ -1,7 +1,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
+import {
+  LuFilter,
+  LuPlus,
+  LuMapPin,
+  LuRuler,
+  LuFileText,
+  LuX
+} from 'react-icons/lu';
 import { locationsApi, geoApi } from '@/services/api';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
 import { useAuthStore } from '@/features/auth/useAuthStore';
@@ -114,6 +123,10 @@ const AddBtn = styled(motion.button)`
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(37,99,235,0.4);
   &:hover { background: rgba(37, 99, 235, 0.95); }
+
+  @media (max-width: 640px) {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
 `;
 
 const StatsBar = styled(motion.div)`
@@ -134,7 +147,7 @@ const StatsBar = styled(motion.div)`
 
   @media (max-width: 640px) {
     top: auto;
-    bottom: 80px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     padding: 6px 12px;
     gap: 12px;
   }
@@ -279,6 +292,44 @@ const LevelIndicator = styled(motion.div)<{ $level: string }>`
   letter-spacing: 0.04em;
 `;
 
+const ContextMenuContainer = styled(motion.div)<{ $x: number; $y: number }>`
+  position: fixed;
+  top: ${({ $y }) => $y}px;
+  left: ${({ $x }) => $x}px;
+  z-index: 1000;
+  min-width: 180px;
+  background: ${({ theme }) => theme.colors.glass};
+  backdrop-filter: blur(24px);
+  border: 1px solid ${({ theme }) => theme.colors.glassBorder};
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+`;
+
+const ContextMenuItem = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.bgHover};
+  }
+
+  span {
+    font-size: 16px;
+  }
+`;
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STATUS_PRIORITY: Record<string, number> = { critical: 0, in_progress: 1, ready: 2 };
@@ -291,11 +342,11 @@ function worstStatus(statuses: string[]): string {
 }
 
 const LAYERS = [
-  { id: 'statuses', label: 'Статусы', icon: '📍' },
+  { id: 'statuses', label: 'Статусы', icon: <LuMapPin size={14} /> },
   { id: 'tasks', label: 'Задачи', icon: '/icons/tasks.png' },
   { id: 'regions', label: 'Регионы', icon: '/icons/map.png' },
   { id: 'equipment', label: 'Оборудование', icon: '/icons/equipment.png' },
-  { id: 'distance', label: 'Дальность', icon: '📏' },
+  { id: 'distance', label: 'Дальность', icon: <LuRuler size={14} /> },
 ];
 
 const LayerIcon = styled.span`
@@ -469,11 +520,30 @@ export function MapPage() {
     setDistanceCenter,
     lastUpdateTrigger,
     isPickingLocation,
+    contextMenu,
+    showContextMenu,
+    hideContextMenu,
+    setPickedCoords,
   } = useMapViewStore();
   const { user } = useAuthStore();
   const { themeMode } = useThemeStore();
+  const [searchParams] = useSearchParams();
+  const locationIdParam = searchParams.get('location_id');
+
   useMapWebSocket();
   const mapRef = useRef<any>(null);
+
+  // Global click listener to hide context menu
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      // If menu is visible, hide it on any click
+      if (useMapViewStore.getState().contextMenu.visible) {
+        hideContextMenu();
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, [hideContextMenu]);
 
   // ── Refs for Custom Search Provider ───────────────────────────────────────
   const mapLevelRef = useRef<string>(mapLevel);
@@ -829,6 +899,28 @@ export function MapPage() {
 
   const features = featuresData?.features ?? [];
 
+  useEffect(() => {
+    if (locationIdParam && mapReady && features.length > 0) {
+      const locId = parseInt(locationIdParam, 10);
+      if (!isNaN(locId)) {
+        const feat = features.find((f: any) => f.properties.id === locId);
+        if (feat && mapRef.current) {
+          const [lon, lat] = feat.geometry.coordinates;
+          if (feat.properties.settlement_id) {
+            selectSettlementLevel(feat.properties.settlement_id, feat.properties.settlement_name);
+            mapRef.current.setCenter([lat, lon], 15, { duration: 500 });
+          }
+          selectLocation(String(locId), [
+            { label: 'Казахстан' },
+            ...(feat.properties.region_name ? [{ label: feat.properties.region_name }] : []),
+            ...(feat.properties.settlement_name ? [{ label: feat.properties.settlement_name }] : []),
+            { label: feat.properties.name },
+          ]);
+        }
+      }
+    }
+  }, [locationIdParam, mapReady, features, selectLocation, selectSettlementLevel]);
+
   // ── Stats (filtered by current level) ────────────────────────────────────
 
   const visibleFeatures = (() => {
@@ -974,7 +1066,16 @@ export function MapPage() {
 
         // Map-level click: fires when user clicks on empty map area
         mapRef.current.events.add('click', (e: any) => {
+          hideContextMenu();
           mapClickCallbackRef.current(e.get('coords'));
+        });
+
+        // Context menu handler
+        mapRef.current.events.add('contextmenu', (e: any) => {
+          e.preventDefault();
+          const coords = e.get('coords');
+          const pagePixels = e.get('pagePixels');
+          showContextMenu(pagePixels[0], pagePixels[1], coords);
         });
 
         setMapReady(true);
@@ -1548,7 +1649,7 @@ export function MapPage() {
       const centerMarker = new window.ymaps.Placemark(center, {
         hintContent: 'Центр замера (перетащите, чтобы изменить)',
         balloonContent: 'Центр замера дальности',
-        iconContent: '📏'
+        iconContent: '<div style="color:white;display:flex;align-items:center;justify-content:center;height:100%"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.3 15.3a2.8 2.8 0 1 1-4 4l-12-12a2.8 2.8 0 1 1 4-4l12 12Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg></div>'
       }, {
         preset: 'islands#blackCircleIcon',
         draggable: true,
@@ -1646,7 +1747,7 @@ export function MapPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <span>*</span> Фильтры
+          <LuFilter size={14} /> Фильтры
           {(filters.statuses.length > 0 || filters.regions.length > 0) && (
             <span style={{
               background: '#3B82F6',
@@ -1730,7 +1831,7 @@ export function MapPage() {
               whileTap={{ scale: 0.97 }}
             >
               <LayerIcon>
-                {layer.icon.startsWith('/') ? (
+                {typeof layer.icon === 'string' && layer.icon.startsWith('/') ? (
                   <img src={layer.icon} alt={layer.label} />
                 ) : (
                   layer.icon
@@ -1756,7 +1857,7 @@ export function MapPage() {
             onClick={() => setMapBackground('white')}
             whileHover={{ x: 3 }}
           >
-            <LayerIcon>📄</LayerIcon> Схематичный
+            <LayerIcon><LuFileText size={14} /></LayerIcon> Схематичный
           </LayerToggle>
         </LayerPanel>
 
@@ -1780,7 +1881,7 @@ export function MapPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            + Добавить объект
+            <LuPlus size={16} /> Добавить объект
           </AddBtn>
         )}
 
@@ -1831,6 +1932,51 @@ export function MapPage() {
                 setPrefilledTask(null);
               }}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Context Menu */}
+        <AnimatePresence>
+          {contextMenu.visible && (
+            <ContextMenuContainer
+              $x={contextMenu.x}
+              $y={contextMenu.y}
+              initial={{ opacity: 0, scale: 0.9, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -10 }}
+              transition={{ duration: 0.15 }}
+            >
+              {canAdd && (
+                <ContextMenuItem
+                  onClick={() => {
+                    if (contextMenu.coords) {
+                      setPickedCoords(contextMenu.coords);
+                      openAddModal();
+                    }
+                    hideContextMenu();
+                  }}
+                >
+                  <LuPlus size={16} /> Добавить объект здесь
+                </ContextMenuItem>
+              )}
+              <ContextMenuItem
+                onClick={() => {
+                  if (contextMenu.coords) {
+                    setDistanceCenter(contextMenu.coords);
+                    if (!activeLayers.includes('distance')) {
+                      toggleLayer('distance');
+                    }
+                  }
+                  hideContextMenu();
+                }}
+              >
+                <LuRuler size={16} /> Установить центр замера
+              </ContextMenuItem>
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 6px' }} />
+              <ContextMenuItem onClick={hideContextMenu}>
+                <LuX size={16} /> Отмена
+              </ContextMenuItem>
+            </ContextMenuContainer>
           )}
         </AnimatePresence>
 

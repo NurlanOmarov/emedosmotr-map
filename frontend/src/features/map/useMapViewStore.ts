@@ -36,6 +36,7 @@ interface MapViewState {
   selectSettlementLevel: (settlementId: number, settlementName: string) => void;
   backToCountry: () => void;
   backToRegion: () => void;
+  openAddModal: () => void;
   closeAddModal: () => void;
   lastUpdateTrigger: number;
   triggerUpdate: () => void;
@@ -45,6 +46,16 @@ interface MapViewState {
   setPickingLocation: (val: boolean) => void;
   pickedCoords: [number, number] | null;
   setPickedCoords: (coords: [number, number] | null) => void;
+
+  // Context menu
+  contextMenu: {
+    visible: boolean;
+    x: number;
+    y: number;
+    coords: [number, number] | null;
+  };
+  showContextMenu: (x: number, y: number, coords: [number, number]) => void;
+  hideContextMenu: () => void;
 }
 
 const defaultFilters: MapFilters = {
@@ -145,4 +156,12 @@ export const useMapViewStore = create<MapViewState>((set, get) => ({
 
   setPickingLocation: (val) => set({ isPickingLocation: val }),
   setPickedCoords: (coords) => set({ pickedCoords: coords }),
+
+  contextMenu: { visible: false, x: 0, y: 0, coords: null },
+  showContextMenu: (x, y, coords) => set({ 
+    contextMenu: { visible: true, x, y, coords } 
+  }),
+  hideContextMenu: () => set({ 
+    contextMenu: { ...get().contextMenu, visible: false } 
+  }),
 }));

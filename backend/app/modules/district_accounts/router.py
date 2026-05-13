@@ -1,14 +1,16 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy import select, delete
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
-from app.models.user import User
 from app.models.district_account import DistrictAccount
+from app.models.user import User
 from app.schemas.district_account import (
     DistrictAccount as DistrictAccountSchema,
+)
+from app.schemas.district_account import (
     DistrictAccountCreate,
     DistrictAccountUpdate,
 )
@@ -19,7 +21,7 @@ router = APIRouter(prefix="/district-accounts", tags=["District Accounts"])
 ALLOWED_ROLES = {"admin", "superadmin", "director"}
 
 
-@router.get("/", response_model=List[DistrictAccountSchema])
+@router.get("/", response_model=list[DistrictAccountSchema])
 async def get_district_accounts(
     settlement_id: int | None = None,
     skip: int = 0,
@@ -50,7 +52,7 @@ async def create_district_account(
     return db_acc
 
 
-@router.post("/upload", response_model=List[DistrictAccountSchema])
+@router.post("/upload", response_model=list[DistrictAccountSchema])
 async def upload_district_accounts(
     settlement_id: int = Form(...),
     file: UploadFile = File(...),
@@ -98,7 +100,7 @@ async def upload_district_accounts(
 
 @router.post("/bulk-delete")
 async def bulk_delete_district_accounts(
-    ids: List[int],
+    ids: list[int],
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

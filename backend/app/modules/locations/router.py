@@ -1,24 +1,23 @@
-import uuid
-from datetime import datetime, timezone
-
-import shutil
 import os
-from fastapi import APIRouter, Depends, HTTPException, Query, status, File, UploadFile
+import shutil
+import uuid
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from geoalchemy2 import WKTElement
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import CurrentUser, require_roles, get_current_user
-from app.models.user import User
-from app.models.location import Commission, Location, MedicalOrganization
-from app.modules.ws.manager import ws_manager
-from app.models.research import MedicalResearch
+from app.middleware.auth import get_current_user, require_roles
 from app.models.equipment import MedicalEquipment
+from app.models.location import Commission, Location, MedicalOrganization
+from app.models.research import MedicalResearch
 from app.models.status_history import StatusHistory
-from app.types import MANDATORY_RESEARCH_TYPES
-from app.models.task import Task
+from app.models.user import User
+from app.modules.ws.manager import ws_manager
 from app.schemas.common import PaginatedResponse
+from app.schemas.equipment import EquipmentCreate, EquipmentResponse
 from app.schemas.location import (
     CommissionCreate,
     CommissionResponse,
@@ -29,12 +28,11 @@ from app.schemas.location import (
     LocationUpdate,
     MedicalOrgCreate,
     MedicalOrgResponse,
-    MedicalOrgUpdate,
     RelayDetail,
     StatusUpdate,
 )
 from app.schemas.research import ResearchCreate, ResearchResponse, ResearchUpdate
-from app.schemas.equipment import EquipmentResponse, EquipmentCreate
+from app.types import MANDATORY_RESEARCH_TYPES
 
 WRITER_ROLES = ("superadmin", "regional_manager", "engineer")
 MANAGER_ROLES = ("superadmin", "regional_manager")
@@ -314,7 +312,7 @@ async def delete_location(
     loc = result.scalar_one_or_none()
     if not loc:
         raise HTTPException(404, "Location not found")
-    loc.deleted_at = datetime.now(timezone.utc)
+    loc.deleted_at = datetime.now(UTC)
     await db.commit()
 
 
@@ -369,7 +367,7 @@ async def update_commission(
         setattr(comm, k, v)
     
     comm.last_updated_by = current_user.id
-    comm.last_updated_at = datetime.now(timezone.utc)
+    comm.last_updated_at = datetime.now(UTC)
     
     await db.commit()
     await db.refresh(comm)
@@ -499,8 +497,10 @@ async def _recalculate_statuses(org_id: uuid.UUID, db: AsyncSession):
         max_rank = max(max_rank, status_ranks.get(r.status, 2))
     
     final_status = "ready"
-    if max_rank == 2: final_status = "critical"
-    elif max_rank == 1: final_status = "in_progress"
+    if max_rank == 2:
+        final_status = "critical"
+    elif max_rank == 1:
+        final_status = "in_progress"
     
     # Update org status
     org_res = await db.execute(select(MedicalOrganization).where(MedicalOrganization.id == org_id))
@@ -631,9 +631,9 @@ async def delete_location_image(
             p = url.lstrip("/")
             if os.path.exists(p):
                 os.remove(p)
-        except:
+        except Exception:
             pass
-            
+
     meta["images"] = images
     loc.meta = meta
     await db.commit()

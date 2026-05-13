@@ -1,15 +1,18 @@
 import asyncio
 import uuid
-from datetime import datetime, timedelta, date
-from sqlalchemy import select, and_, not_
+from datetime import date, datetime, timedelta
+
+from sqlalchemy import and_, select
+
 from app.celery_app import celery_app
 from app.database import AsyncSessionLocal
-from app.models.push import PushSubscription
-from app.models.user import User
-from app.models.task import Task
 from app.models.notification import Notification
+from app.models.push import PushSubscription
+from app.models.task import Task
+from app.models.user import User
 from app.services.push import push_service
 from app.services.telegram import telegram_service
+
 
 @celery_app.task
 def send_push_notifications_task(user_id_str: str, title: str, body: str, data: dict = None):

@@ -1,21 +1,72 @@
 """
-Начальный seed: создаёт superadmin + тестовые данные (locations, tasks).
+Начальный seed: создаёт системные роли, пользователей, локации и тестовые задачи.
 Запуск: python scripts/seed.py
 """
 import asyncio
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from passlib.context import CryptContext
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import settings
-from app.models import User, Location, Task, Commission
+from app.models import Location, Task, User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+SYSTEM_ROLES = [
+    {
+        "name": "superadmin",
+        "display_name": "Суперадминистратор",
+        "description": "Полный доступ ко всем функциям системы",
+        "color": "#DC2626",
+        "is_system": True,
+        "permissions": ["*"],
+    },
+    {
+        "name": "admin",
+        "display_name": "Администратор",
+        "description": "Управление пользователями и настройками",
+        "color": "#EA580C",
+        "is_system": True,
+        "permissions": ["users:read", "users:write", "locations:*", "tasks:*", "analytics:read"],
+    },
+    {
+        "name": "director",
+        "display_name": "Директор",
+        "description": "Просмотр всей аналитики и управление регионами",
+        "color": "#7C3AED",
+        "is_system": True,
+        "permissions": ["analytics:*", "locations:read", "tasks:read", "users:read"],
+    },
+    {
+        "name": "regional_manager",
+        "display_name": "Региональный менеджер",
+        "description": "Управление задачами и локациями своего региона",
+        "color": "#2563EB",
+        "is_system": True,
+        "permissions": ["locations:read", "locations:write", "tasks:*", "analytics:read"],
+    },
+    {
+        "name": "engineer",
+        "display_name": "Инженер",
+        "description": "Выполнение задач и обновление статусов локаций",
+        "color": "#059669",
+        "is_system": True,
+        "permissions": ["locations:read", "tasks:read", "tasks:write"],
+    },
+    {
+        "name": "analyst",
+        "display_name": "Аналитик",
+        "description": "Просмотр аналитики и отчётов",
+        "color": "#0891B2",
+        "is_system": True,
+        "permissions": ["analytics:*", "locations:read", "tasks:read"],
+    },
+]
 
 TEST_USERS = [
     {
@@ -124,11 +175,37 @@ TEST_LOCATIONS = [
 ]
 
 
-async def seed():
+async def seed() -> None:
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
     Session = async_sessionmaker(engine, expire_on_commit=False)
 
     async with Session() as db:
+        # Roles
+        import json
+        for role in SYSTEM_ROLES:
+            existing = await db.execute(
+                text("SELECT name FROM roles WHERE name = :name"),
+                {"name": role["name"]},
+            )
+            if existing.scalar_one_or_none():
+                print(f"  [skip] Role '{role['name']}' already exists")
+                continue
+            await db.execute(
+                text(
+                    "INSERT INTO roles (name, display_name, description, color, is_system, permissions) "
+                    "VALUES (:name, :display_name, :description, :color, :is_system, :permissions::jsonb)"
+                ),
+                {
+                    "name": role["name"],
+                    "display_name": role["display_name"],
+                    "description": role["description"],
+                    "color": role["color"],
+                    "is_system": role["is_system"],
+                    "permissions": json.dumps(role["permissions"]),
+                },
+            )
+            print(f"  [+] Role '{role['name']}'")
+
         # Users
         created_users = {}
         for data in TEST_USERS:

@@ -7,6 +7,8 @@ import { darkTheme, lightTheme } from '@/styles/theme';
 import { useThemeStore } from '@/styles/useThemeStore';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Header } from '@/components/Layout/Header';
+import { BottomNav } from '@/components/Layout/BottomNav';
+import { PWAInstallPrompt } from '@/components/Layout/PWAInstallPrompt';
 import { LoginPage } from '@/pages/Login';
 import { MapPage } from '@/pages/Map';
 import { DashboardPage } from '@/pages/Dashboard';
@@ -17,9 +19,11 @@ import { SettingsPage } from '@/pages/Settings';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { UserList } from '@/pages/Admin/Users/UserList';
+import { RolesPage } from '@/pages/Admin/Roles/RolesPage';
 import { ToastContainer } from '@/features/notifications/ToastContainer';
 import { NotificationDrawer } from '@/features/notifications/NotificationDrawer';
 import { GlobalSearch } from '@/components/GlobalSearch';
+import { ConfirmProvider } from '@/components/shared/ConfirmDialog';
 import { wsService } from '@/services/websocket';
 import { useEffect, useState } from 'react';
 
@@ -41,6 +45,10 @@ const PageWrapper = styled(motion.div)`
   overflow: hidden;
   display: flex;
   flex-direction: column;
+
+  @media (max-width: 768px) {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
 `;
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -68,7 +76,7 @@ function AnimatedRoutes() {
               <AppShell>
                 <Header />
                 <PageWrapper
-                  initial={{ opacity: 0 }}
+                  initial={{ opacity: 1 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
@@ -76,6 +84,7 @@ function AnimatedRoutes() {
                 >
                   <MapPage />
                 </PageWrapper>
+                <BottomNav />
               </AppShell>
             </ProtectedRoute>
           }
@@ -94,6 +103,7 @@ function AnimatedRoutes() {
                 >
                   <DashboardPage />
                 </PageWrapper>
+                <BottomNav />
               </AppShell>
             </ProtectedRoute>
           }
@@ -112,6 +122,7 @@ function AnimatedRoutes() {
                 >
                   <TasksPage />
                 </PageWrapper>
+                <BottomNav />
               </AppShell>
             </ProtectedRoute>
           }
@@ -130,6 +141,26 @@ function AnimatedRoutes() {
                 >
                   <UserList />
                 </PageWrapper>
+                <BottomNav />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/roles"
+          element={
+            <ProtectedRoute roles={['admin', 'superadmin']}>
+              <AppShell>
+                <Header />
+                <PageWrapper
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <RolesPage />
+                </PageWrapper>
+                <BottomNav />
               </AppShell>
             </ProtectedRoute>
           }
@@ -148,6 +179,7 @@ function AnimatedRoutes() {
                 >
                   <DistrictAccountsPage />
                 </PageWrapper>
+                <BottomNav />
               </AppShell>
             </ProtectedRoute>
           }
@@ -166,6 +198,7 @@ function AnimatedRoutes() {
                 >
                   <TaskOpsPage />
                 </PageWrapper>
+                <BottomNav />
               </AppShell>
             </ProtectedRoute>
           }
@@ -184,6 +217,7 @@ function AnimatedRoutes() {
                 >
                   <SettingsPage />
                 </PageWrapper>
+                <BottomNav />
               </AppShell>
             </ProtectedRoute>
           }
@@ -236,11 +270,14 @@ export function App() {
   return (
     <QueryClientProvider client={qc}>
       <ThemeProvider theme={currentTheme}>
-        <GlobalStyles />
-        <AnimatedRoutes />
-        <ToastContainer />
-        <NotificationDrawer />
-        <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+        <ConfirmProvider>
+          <GlobalStyles />
+          <AnimatedRoutes />
+          <ToastContainer />
+          <NotificationDrawer />
+          <PWAInstallPrompt />
+          <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+        </ConfirmProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

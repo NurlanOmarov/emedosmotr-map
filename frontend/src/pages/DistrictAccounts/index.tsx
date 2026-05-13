@@ -22,6 +22,7 @@ import html2pdf from 'html2pdf.js';
 import { districtAccountsApi, geoApi } from '@/services/api';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useNotificationStore } from '@/features/notifications/useNotificationStore';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -438,6 +439,7 @@ export const DistrictAccountsPage: React.FC = () => {
 
   const { user } = useAuthStore();
   const { addToast } = useNotificationStore();
+  const confirm = useConfirm();
   const canEdit = user?.role && ['admin', 'superadmin', 'director'].includes(user.role);
   const [searchParams] = useSearchParams();
 
@@ -513,12 +515,12 @@ export const DistrictAccountsPage: React.FC = () => {
     const opt = {
       margin: 10,
       filename: `Accounts_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
     
-    html2pdf().from(element).set(opt).save();
+    (html2pdf() as any).from(element).set(opt).save();
   };
 
   // load oblasts (regions) once; then auto-select from URL ?settlement_id=X
@@ -619,7 +621,13 @@ export const DistrictAccountsPage: React.FC = () => {
 
   // ── delete single ────────────────────────────────────────────────────────────
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Удалить эту учётную запись?')) return;
+    const ok = await confirm({
+      title: 'Удалить учётную запись?',
+      message: 'Запись будет удалена безвозвратно.',
+      confirmLabel: 'Удалить',
+      variant: 'danger',
+    });
+    if (!ok) return;
     await districtAccountsApi.delete(id);
     setAccounts(prev => prev.filter(a => a.id !== id));
     setSelectedIds(prev => { const s = new Set(prev); s.delete(id); return s; });
@@ -627,7 +635,13 @@ export const DistrictAccountsPage: React.FC = () => {
 
   // ── bulk delete ──────────────────────────────────────────────────────────────
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Удалить ${selectedIds.size} выбранных записей?`)) return;
+    const ok = await confirm({
+      title: `Удалить ${selectedIds.size} записей?`,
+      message: 'Выбранные учётные записи будут удалены безвозвратно.',
+      confirmLabel: 'Удалить всё',
+      variant: 'danger',
+    });
+    if (!ok) return;
     await districtAccountsApi.bulkDelete(Array.from(selectedIds));
     setAccounts(prev => prev.filter(a => !selectedIds.has(a.id)));
     setSelectedIds(new Set());
@@ -635,7 +649,14 @@ export const DistrictAccountsPage: React.FC = () => {
 
   // ── clear region ─────────────────────────────────────────────────────────────
   const handleClear = async () => {
-    if (!selectedDistrictId || !window.confirm('Удалить ВСЕ учётные записи этого района?')) return;
+    if (!selectedDistrictId) return;
+    const ok = await confirm({
+      title: 'Удалить ВСЕ записи района?',
+      message: 'Все учётные записи этого района будут удалены безвозвратно. Это действие нельзя отменить.',
+      confirmLabel: 'Удалить всё',
+      variant: 'danger',
+    });
+    if (!ok) return;
     await districtAccountsApi.clear(selectedDistrictId as number);
     setAccounts([]);
     setSelectedIds(new Set());

@@ -1,42 +1,41 @@
 import uuid
 from datetime import date, datetime
-from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
-from app.models.taskops import TaskStatus, TaskPriority, DependencyType
+from app.models.taskops import DependencyType, TaskPriority, TaskStatus
 
 
 class TaskCreate(BaseModel):
     title: str = Field(..., max_length=200)
-    description: Optional[str] = None
+    description: str | None = None
     status: TaskStatus = TaskStatus.backlog
     priority: TaskPriority = TaskPriority.p2_medium
-    assignee_id: Optional[uuid.UUID] = None
-    cycle_id: Optional[uuid.UUID] = None
-    parent_task_id: Optional[uuid.UUID] = None
-    estimate: Optional[str] = Field(None, max_length=20)
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
-    location_id: Optional[uuid.UUID] = None
+    assignee_id: uuid.UUID | None = None
+    cycle_id: uuid.UUID | None = None
+    parent_task_id: uuid.UUID | None = None
+    estimate: str | None = Field(None, max_length=20)
+    start_date: date | None = None
+    due_date: date | None = None
+    location_id: uuid.UUID | None = None
     is_external_visible: bool = False
-    label_ids: List[uuid.UUID] = []
+    label_ids: list[uuid.UUID] = []
 
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = Field(None, max_length=200)
-    description: Optional[str] = None
-    status: Optional[TaskStatus] = None
-    priority: Optional[TaskPriority] = None
-    assignee_id: Optional[uuid.UUID] = None
-    cycle_id: Optional[uuid.UUID] = None
-    estimate: Optional[str] = Field(None, max_length=20)
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
-    location_id: Optional[uuid.UUID] = None
-    is_external_visible: Optional[bool] = None
-    position: Optional[int] = None
-    label_ids: Optional[List[uuid.UUID]] = None
+    title: str | None = Field(None, max_length=200)
+    description: str | None = None
+    status: TaskStatus | None = None
+    priority: TaskPriority | None = None
+    assignee_id: uuid.UUID | None = None
+    cycle_id: uuid.UUID | None = None
+    estimate: str | None = Field(None, max_length=20)
+    start_date: date | None = None
+    due_date: date | None = None
+    location_id: uuid.UUID | None = None
+    is_external_visible: bool | None = None
+    position: int | None = None
+    label_ids: list[uuid.UUID] | None = None
 
 
 class LabelResponse(BaseModel):
@@ -50,29 +49,33 @@ class LabelResponse(BaseModel):
 class TaskResponse(BaseModel):
     id: uuid.UUID
     project_id: uuid.UUID
-    cycle_id: Optional[uuid.UUID]
-    parent_task_id: Optional[uuid.UUID]
+    cycle_id: uuid.UUID | None
+    parent_task_id: uuid.UUID | None
     title: str
-    description: Optional[str]
+    description: str | None
     status: TaskStatus
     priority: TaskPriority
-    assignee_id: Optional[uuid.UUID]
+    assignee_id: uuid.UUID | None
     reporter_id: uuid.UUID
-    estimate: Optional[str]
-    start_date: Optional[date]
-    due_date: Optional[date]
-    location_id: Optional[uuid.UUID]
+    estimate: str | None
+    start_date: date | None
+    due_date: date | None
+    location_id: uuid.UUID | None
     is_external_visible: bool
     position: int
-    completed_at: Optional[datetime]
+    completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    assignee_name: Optional[str] = None
-    reporter_name: Optional[str] = None
-    location_name: Optional[str] = None
-    labels: List[LabelResponse] = []
-    subtask_count: Optional[int] = None
-    comment_count: Optional[int] = None
+    assignee_name: str | None = None
+    reporter_name: str | None = None
+    location_name: str | None = None
+    labels: list[LabelResponse] = []
+    attachments: list["AttachmentResponse"] = []
+    subtask_count: int | None = None
+    completed_subtask_count: int | None = None
+    comment_count: int | None = None
+    dependencies_incoming: list["DependencyResponse"] = []
+    dependencies_outgoing: list["DependencyResponse"] = []
 
     model_config = {"from_attributes": True}
 
@@ -88,7 +91,7 @@ class CommentResponse(BaseModel):
     content: str
     created_at: datetime
     updated_at: datetime
-    author_name: Optional[str] = None
+    author_name: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -103,6 +106,19 @@ class DependencyResponse(BaseModel):
     source_task_id: uuid.UUID
     target_task_id: uuid.UUID
     type: DependencyType
+    created_at: datetime
+    source_task_title: str | None = None
+    target_task_title: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class AttachmentResponse(BaseModel):
+    id: uuid.UUID
+    task_id: uuid.UUID
+    filename: str
+    content_type: str | None
+    file_size: int | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

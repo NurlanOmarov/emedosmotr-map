@@ -1,4 +1,5 @@
 from app.schemas.auth import LoginRequest, LoginResponse, TokenRefreshResponse, UserMe
+from app.schemas.common import PaginatedResponse
 from app.schemas.geo import RegionResponse, SettlementResponse
 from app.schemas.location import (
     CommissionCreate,
@@ -22,7 +23,6 @@ from app.schemas.task import (
     TaskUpdate,
 )
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
-from app.schemas.common import PaginatedResponse
 
 __all__ = [
     "LoginRequest",

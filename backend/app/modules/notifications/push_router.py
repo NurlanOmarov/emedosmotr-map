@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, delete
+from fastapi import APIRouter, Depends, status
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.middleware.auth import get_current_user
-from app.models.user import User
 from app.models.push import PushSubscription
+from app.models.user import User
 from app.schemas.push import PushSubscriptionCreate, PushSubscriptionResponse
-from app.config import settings
 
 router = APIRouter(prefix="/push", tags=["Push Notifications"])
 

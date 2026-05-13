@@ -1,13 +1,14 @@
-import httpx
 import math
-import json
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
+
+import httpx
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+
+from app.config import settings
 from app.models.route import RouteCache
 from app.modules.routing.schemas import Coordinate, RouteResponse
-from app.config import settings
+
 
 class RoutingService:
     @staticmethod
