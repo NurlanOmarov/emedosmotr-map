@@ -35,6 +35,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { TasksList } from '@/components/shared/TasksList';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 
 
 // ─── Panel shell ────────────────────────────────────────────────────────────
@@ -1509,6 +1510,7 @@ interface Props {
 }
 
 export function LocationDetail({ locationId }: Props) {
+  const confirm = useConfirm();
   const { backToMap, breadcrumb, triggerUpdate } = useMapViewStore();
   const { user } = useAuthStore();
   const qc = useQueryClient();
@@ -1552,13 +1554,22 @@ export function LocationDetail({ locationId }: Props) {
     mutationFn: () => locationsApi.delete(locationId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['map-features'] });
+      qc.invalidateQueries({ queryKey: ['locations'] });
       backToMap();
       triggerUpdate();
     },
   });
 
-  const handleDelete = () => {
-    if (window.confirm('Вы уверены, что хотите удалить этот объект с карты? Это действие нельзя будет отменить.')) {
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: 'Удалить объект?',
+      message: 'Вы уверены, что хотите удалить этот объект с карты? Это действие нельзя будет отменить.',
+      confirmLabel: 'Удалить',
+      cancelLabel: 'Отмена',
+      variant: 'danger'
+    });
+    
+    if (ok) {
       deleteLocation.mutate();
     }
   };
