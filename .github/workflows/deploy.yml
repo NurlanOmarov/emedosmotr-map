@@ -74,4 +74,8 @@ jobs:
             docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
             docker image prune -f
 
+            # Reload nginx so it re-resolves backend IP after container rebuild
+            sleep 5
+            docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+
             echo "Deploy completed at $(date)"
