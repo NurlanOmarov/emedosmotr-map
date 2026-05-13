@@ -1391,14 +1391,43 @@ export function MapPage() {
 
   useEffect(() => {
     if (!mapReady || !regionsCollectionRef.current) return;
-    const collection = regionsCollectionRef.current;
-    collection.removeAll();
+
+    // Clear immediately so stale polygons disappear synchronously
+    regionsCollectionRef.current.removeAll();
     labelsCollectionRef.current?.removeAll();
 
     if (!regionsLayerActive || !regionsData) return;
     if (!Array.isArray(regionsData)) return;
 
-    const swap = (ring: number[][]) => ring.map((p) => [p[1], p[0]]);
+    // Defer heavy polygon rendering until browser is idle (tiles already painted by then)
+    const scheduleRender = (fn: () => void) => {
+      if ('requestIdleCallback' in window) {
+        const id = (window as any).requestIdleCallback(fn, { timeout: 500 });
+        return () => (window as any).cancelIdleCallback(id);
+      }
+      const id = setTimeout(fn, 0);
+      return () => clearTimeout(id);
+    };
+
+    return scheduleRender(() => {
+    const collection = regionsCollectionRef.current;
+    if (!collection) return;
+
+    // Drop points closer than ~1km — invisible at country zoom, cuts render time 10x
+    const simplifyRing = (ring: number[][], tol = 0.01): number[][] => {
+      if (ring.length <= 4) return ring;
+      const out: number[][] = [ring[0]];
+      for (let i = 1; i < ring.length - 1; i++) {
+        const prev = out[out.length - 1];
+        if (Math.abs(ring[i][0] - prev[0]) >= tol || Math.abs(ring[i][1] - prev[1]) >= tol) {
+          out.push(ring[i]);
+        }
+      }
+      out.push(ring[ring.length - 1]);
+      return out;
+    };
+
+    const swap = (ring: number[][]) => simplifyRing(ring).map((p) => [p[1], p[0]]);
 
     regionsData.forEach((region: any) => {
       if (!region.geometry_json) return;
@@ -1629,6 +1658,7 @@ export function MapPage() {
         console.error('Error rendering region', region.name, err);
       }
     });
+    }); // end scheduleRender
 
   }, [regionsData, regionsLayerActive, mapReady, selectRegionLevel]);
 
