@@ -35,7 +35,7 @@ from app.schemas.research import ResearchCreate, ResearchResponse, ResearchUpdat
 from app.types import MANDATORY_RESEARCH_TYPES
 
 WRITER_ROLES = ("superadmin", "regional_manager", "engineer")
-MANAGER_ROLES = ("superadmin", "regional_manager")
+MANAGER_ROLES = ("superadmin", "regional_manager", "director", "admin")
 
 router = APIRouter(prefix="/locations", tags=["Locations"])
 
@@ -303,7 +303,7 @@ async def update_status(
 @router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_location(
     location_id: uuid.UUID,
-    current_user: User = Depends(require_roles("superadmin", "regional_manager")),
+    current_user: User = Depends(require_roles("superadmin", "regional_manager", "director", "admin")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(

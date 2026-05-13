@@ -1545,8 +1545,8 @@ export function LocationDetail({ locationId }: Props) {
     },
   });
 
-  const canEdit = !!user?.role && ['admin', 'superadmin', 'regional_manager', 'engineer'].includes(user.role);
-  const canDelete = !!user?.role && ['superadmin', 'regional_manager'].includes(user.role);
+  const canEdit = !!user?.role && ['admin', 'superadmin', 'regional_manager', 'director', 'engineer'].includes(user.role);
+  const canDelete = !!user?.role && ['superadmin', 'regional_manager', 'director', 'admin'].includes(user.role);
 
   const deleteLocation = useMutation({
     mutationFn: () => locationsApi.delete(locationId),
