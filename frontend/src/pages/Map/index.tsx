@@ -1887,11 +1887,7 @@ export function MapPage() {
               whileTap={{ scale: 0.97 }}
             >
               <LayerIcon>
-                {typeof layer.icon === 'string' && layer.icon.startsWith('/') ? (
-                  <img src={layer.icon} alt={layer.label} />
-                ) : (
-                  layer.icon
-                )}
+                {layer.icon}
               </LayerIcon>
               {layer.label}
             </LayerToggle>
