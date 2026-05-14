@@ -12,13 +12,25 @@
 
 ## Подключение
 ```bash
+# Короткий способ (alias в ~/.ssh/config):
+ssh emedosmotr
+
+# Полный способ:
 ssh -p 4822 -i ~/.ssh/emedosmotr_deploy_ed25519 administrator@82.115.49.125
 ```
 
 ## SSH-ключи
 - **Приватный ключ (локально):** `~/.ssh/emedosmotr_deploy_ed25519`
-- **Публичный ключ:** `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIze7eyWpZAx6i2ZtHW+Qjaacb2X0L4F7uuC5w1Ng5kf github-actions-emedosmotr`
-- **На сервере:** `/home/administrator/.ssh/authorized_keys`
+- **На сервере (`/home/administrator/.ssh/authorized_keys`):** 2 ключа
+  - `ssh-ed25519 ...IIze7eyWpZAx6i2ZtHW+Qjaacb2X0L4F7uuC5w1Ng5kf github-actions-emedosmotr` — GitHub Actions
+  - `ssh-ed25519 ...INK8Ld9CzlD+v22BMKX0vsZXZeAXRhfVNgAhMrMxM7ON emedosmotr-deploy` — локальная разработка
+
+## Fallback — если SSH-ключ не работает
+Зайти как `ubuntu` через пароль (значение `SERVER_UBUNTU_PASSWORD` в `.env` проекта):
+```bash
+sshpass -p "$SERVER_UBUNTU_PASSWORD" ssh -p 4822 ubuntu@82.115.49.125
+sudo -u administrator -i   # переключиться на administrator
+```
 
 ## Структура на сервере
 - **Проект:** `/home/administrator/emedosmotr-map`
