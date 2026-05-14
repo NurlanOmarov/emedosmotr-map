@@ -12,6 +12,7 @@ import {
   LuX,
   LuMap,
   LuClipboardList,
+  LuServer,
 } from 'react-icons/lu';
 import { locationsApi, geoApi } from '@/services/api';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
@@ -332,7 +333,7 @@ const LAYERS = [
   { id: 'statuses', label: 'Статусы', icon: <LuMapPin size={14} /> },
   { id: 'tasks', label: 'Задачи', icon: <LuClipboardList size={14} /> },
   { id: 'regions', label: 'Регионы', icon: <LuMap size={14} /> },
-  { id: 'equipment', label: 'Оборудование', icon: '/icons/equipment.png' },
+  { id: 'equipment', label: 'Оборудование', icon: <LuServer size={14} /> },
   { id: 'distance', label: 'Дальность', icon: <LuRuler size={14} /> },
 ];
 
