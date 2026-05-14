@@ -2,7 +2,7 @@
 
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { CacheFirst } from 'workbox-strategies';
+import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
@@ -14,14 +14,14 @@ self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim(
 
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Cache region boundaries forever — they never change
+// Cache region boundaries — NetworkFirst so is_connected changes appear after deploy
 registerRoute(
   ({ url }) => url.pathname.includes('/geo/regions') && url.searchParams.get('include_geometry') === 'true',
-  new CacheFirst({
-    cacheName: 'regions-geo-v1',
+  new NetworkFirst({
+    cacheName: 'regions-geo-v2',
     plugins: [
       new CacheableResponsePlugin({ statuses: [200] }),
-      new ExpirationPlugin({ maxAgeSeconds: 365 * 24 * 60 * 60 }),
+      new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60 }), // 1 day fallback if offline
     ],
   })
 );
