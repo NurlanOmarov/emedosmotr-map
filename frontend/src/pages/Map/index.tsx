@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
@@ -975,6 +975,18 @@ export function MapPage() {
   const regionsDataRef = useRef<any>(regionsData);
   useEffect(() => { regionsDataRef.current = regionsData; }, [regionsData]);
 
+  // Stable signature of the polygon-relevant data. When placeholderData is
+  // replaced by a fresh API response with identical content, the array
+  // reference changes but this hash does not — so the heavy re-render effect
+  // below stays put and we avoid the visible "flicker / re-draw" right after
+  // a page reload.
+  const regionsRenderKey = useMemo(() => {
+    if (!Array.isArray(regionsData)) return '';
+    return regionsData
+      .map((r: any) => `${r.region_id}:${r.is_connected ? 1 : 0}`)
+      .join('|');
+  }, [regionsData]);
+
   useEffect(() => {
     const init = () => {
       if (!window.ymaps || mapRef.current) return;
@@ -1666,7 +1678,8 @@ export function MapPage() {
     });
     }); // end scheduleRender
 
-  }, [regionsData, regionsLayerActive, mapReady, selectRegionLevel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regionsRenderKey, regionsLayerActive, mapReady, selectRegionLevel]);
 
   // ── Fly to region when selectedRegionId changes ───────────────────────────
   useEffect(() => {
