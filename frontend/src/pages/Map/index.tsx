@@ -1168,7 +1168,8 @@ export function MapPage() {
     const collection = settlementCollectionRef.current;
     collection.removeAll();
 
-    if (mapLevel === 'settlement') return;
+    const statusesLayerActive = activeLayers.includes('statuses');
+    if (mapLevel === 'settlement' || !statusesLayerActive) return;
 
     const groupMap: Record<number, { statuses: string[]; lat: number; lon: number; name: string }> = {};
 
@@ -1278,7 +1279,7 @@ export function MapPage() {
       );
       collection.add(settlementLabel);
     });
-  }, [features, mapReady, settlementsData, mapLevel, selectedRegionId, selectSettlementLevel, lastUpdateTrigger]);
+  }, [features, mapReady, settlementsData, mapLevel, selectedRegionId, selectSettlementLevel, lastUpdateTrigger, activeLayers]);
 
   // ── Individual location markers (settlement level) ────────────────────────
 
