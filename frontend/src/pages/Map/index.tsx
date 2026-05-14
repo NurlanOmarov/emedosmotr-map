@@ -1580,34 +1580,41 @@ export function MapPage() {
         const baseFillOpacity = region.is_connected ? 0.28 : 0.08;
         const hoverFillOpacity = region.is_connected ? 0.42 : 0.2;
 
+        const isSelectedRegion = selectedRegionIdRef.current === region.region_id;
+
         polygonRings.forEach((rings) => {
           const polygon = new window.ymaps.Polygon(rings, {
             hintContent: region.is_connected
               ? `${region.name} — подключён к eMedosmotr`
               : `${region.name} — не подключён`,
           }, {
+            fill: !isSelectedRegion,
             fillColor: regionColor,
-            fillOpacity: baseFillOpacity,
+            fillOpacity: isSelectedRegion ? 0 : baseFillOpacity,
             strokeColor: regionColor,
-            strokeWidth: 2.0,
-            cursor: activeToolRef.current !== 'none' ? 'crosshair' : 'pointer',
+            strokeWidth: isSelectedRegion ? 2.5 : 2.0,
+            cursor: isSelectedRegion
+              ? 'default'
+              : (activeToolRef.current !== 'none' ? 'crosshair' : 'pointer'),
           });
 
-          polygon.events.add('mouseenter', () => {
-            polygon.options.set({ fillOpacity: hoverFillOpacity, strokeWidth: 3.0 });
-          });
-          polygon.events.add('mouseleave', () => {
-            polygon.options.set({ fillOpacity: baseFillOpacity, strokeWidth: 2.0 });
-          });
-          polygon.events.add('click', (e: any) => {
-            if (activeToolRef.current !== 'none' || isPickingLocationRef.current) {
+          if (!isSelectedRegion) {
+            polygon.events.add('mouseenter', () => {
+              polygon.options.set({ fillOpacity: hoverFillOpacity, strokeWidth: 3.0 });
+            });
+            polygon.events.add('mouseleave', () => {
+              polygon.options.set({ fillOpacity: baseFillOpacity, strokeWidth: 2.0 });
+            });
+            polygon.events.add('click', (e: any) => {
+              if (activeToolRef.current !== 'none' || isPickingLocationRef.current) {
+                e.stopPropagation();
+                mapClickCallbackRef.current(e.get('coords'));
+                return;
+              }
               e.stopPropagation();
-              mapClickCallbackRef.current(e.get('coords'));
-              return;
-            }
-            e.stopPropagation();
-            handleRegionClick();
-          });
+              handleRegionClick();
+            });
+          }
 
           regionPolygons.push(polygon);
           collection.add(polygon);
@@ -1679,7 +1686,7 @@ export function MapPage() {
     }); // end scheduleRender
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionsRenderKey, regionsLayerActive, mapReady, selectRegionLevel]);
+  }, [regionsRenderKey, regionsLayerActive, mapReady, selectRegionLevel, selectedRegionId]);
 
   // ── Fly to region when selectedRegionId changes ───────────────────────────
   useEffect(() => {
