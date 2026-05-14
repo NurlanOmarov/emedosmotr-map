@@ -1561,6 +1561,10 @@ export function MapPage() {
         };
 
         const regionColor = region.is_connected ? '#22C55E' : '#3B82F6';
+        // Connected regions get a noticeably stronger fill so they read
+        // as "active" at a glance; unconnected ones stay subtle.
+        const baseFillOpacity = region.is_connected ? 0.28 : 0.08;
+        const hoverFillOpacity = region.is_connected ? 0.42 : 0.2;
 
         polygonRings.forEach((rings) => {
           const polygon = new window.ymaps.Polygon(rings, {
@@ -1569,17 +1573,17 @@ export function MapPage() {
               : `${region.name} — не подключён`,
           }, {
             fillColor: regionColor,
-            fillOpacity: 0.08,
+            fillOpacity: baseFillOpacity,
             strokeColor: regionColor,
             strokeWidth: 2.0,
             cursor: activeToolRef.current !== 'none' ? 'crosshair' : 'pointer',
           });
 
           polygon.events.add('mouseenter', () => {
-            polygon.options.set({ fillOpacity: 0.2, strokeWidth: 3.0 });
+            polygon.options.set({ fillOpacity: hoverFillOpacity, strokeWidth: 3.0 });
           });
           polygon.events.add('mouseleave', () => {
-            polygon.options.set({ fillOpacity: 0.08, strokeWidth: 2.0 });
+            polygon.options.set({ fillOpacity: baseFillOpacity, strokeWidth: 2.0 });
           });
           polygon.events.add('click', (e: any) => {
             if (activeToolRef.current !== 'none' || isPickingLocationRef.current) {
