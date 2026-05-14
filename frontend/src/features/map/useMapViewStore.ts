@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { BreadcrumbItem, MapFilters } from '@/types';
 
 interface MapViewState {
@@ -66,7 +67,9 @@ const defaultFilters: MapFilters = {
   assignedToMe: false,
 };
 
-export const useMapViewStore = create<MapViewState>((set, get) => ({
+export const useMapViewStore = create<MapViewState>()(
+  persist(
+    (set, get) => ({
   mode: 'map',
   selectedLocationId: null,
   breadcrumb: [],
@@ -161,7 +164,19 @@ export const useMapViewStore = create<MapViewState>((set, get) => ({
   showContextMenu: (x, y, coords) => set({ 
     contextMenu: { visible: true, x, y, coords } 
   }),
-  hideContextMenu: () => set({ 
-    contextMenu: { ...get().contextMenu, visible: false } 
+  hideContextMenu: () => set({
+    contextMenu: { ...get().contextMenu, visible: false }
   }),
-}));
+    }),
+    {
+      name: 'map-view-store',
+      // Only persist user UI preferences — not ephemeral navigation state.
+      // Map level / selected region / open modals / context menu reset on reload.
+      partialize: (state) => ({
+        mapBackground: state.mapBackground,
+        activeLayers: state.activeLayers,
+        filters: state.filters,
+      }),
+    }
+  )
+);
