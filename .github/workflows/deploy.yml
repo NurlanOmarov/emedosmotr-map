@@ -47,10 +47,12 @@ jobs:
             else
               git clone https://github.com/NurlanOmarov/emedosmotr-map.git /home/administrator/emedosmotr-map
             fi
-            # WIPE old dist completely — scp does not delete removed files
-            # and a stale layout was leaving the prod with month-old assets.
-            rm -rf /home/administrator/emedosmotr-map/frontend/dist
+            # Clear dist CONTENTS only — NEVER rm -rf the directory itself.
+            # The nginx container bind-mounts this path; removing the dir breaks
+            # the mount (container keeps pointing to the deleted inode and
+            # serves stale or empty content until container restart).
             mkdir -p /home/administrator/emedosmotr-map/frontend/dist
+            find /home/administrator/emedosmotr-map/frontend/dist -mindepth 1 -delete
             echo "=== Pre-scp state ==="
             ls -la /home/administrator/emedosmotr-map/frontend/dist/
 
@@ -127,8 +129,16 @@ jobs:
 
             docker image prune -f
 
-            # Reload nginx so it re-resolves backend IP after container rebuild
-            sleep 5
-            docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+            # Restart frontend nginx so it picks up new dist files via bind mount.
+            # nginx -s reload reloads the *config* but does NOT re-read static files
+            # from disk if the open file descriptors point to deleted inodes.
+            # Restart also forces a fresh DNS resolution which we want anyway.
+            docker compose -f docker-compose.prod.yml restart nginx
+
+            # Restart the central infra nginx so it re-resolves the (possibly new)
+            # IP of the just-restarted frontend nginx, avoiding 502 Bad Gateway.
+            if docker ps --format '{{.Names}}' | grep -q '^emedosmotr-infra-nginx-1$'; then
+              docker restart emedosmotr-infra-nginx-1
+            fi
 
             echo "Deploy completed at $(date)"
