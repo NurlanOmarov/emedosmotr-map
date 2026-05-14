@@ -307,6 +307,8 @@ export function AddLocationModal({ onClose }: Props) {
   const [coordsError, setCoordsError] = useState('');
   const [status, setStatus] = useState<StatusType>('critical');
   const [notes, setNotes] = useState('');
+  const [chiefName, setChiefName] = useState('');
+  const [chiefPhone, setChiefPhone] = useState('');
 
   // Sync picked coords from map
   useEffect(() => {
@@ -385,6 +387,8 @@ export function AddLocationModal({ onClose }: Props) {
       lon: parsed.lon,
       status,
       notes: notes.trim() || null,
+      chief_name: chiefName.trim() || null,
+      chief_phone: chiefPhone.trim() || null,
     });
   };
 
@@ -552,6 +556,27 @@ export function AddLocationModal({ onClose }: Props) {
                   ))}
                 </Select>
               </FormGroup>
+
+              {locationType === 'military_office' && (
+                <>
+                  <FormGroup>
+                    <Label>Начальник призыва (ФИО)</Label>
+                    <Input
+                      value={chiefName}
+                      onChange={e => setChiefName(e.target.value)}
+                      placeholder="Иванов Иван Иванович"
+                    />
+                  </FormGroup>
+                  <FormGroup>
+                    <Label>Контакты (телефон / WhatsApp)</Label>
+                    <Input
+                      value={chiefPhone}
+                      onChange={e => setChiefPhone(e.target.value)}
+                      placeholder="+7 777 123 45 67"
+                    />
+                  </FormGroup>
+                </>
+              )}
 
               <FormGroup>
                 <Label>

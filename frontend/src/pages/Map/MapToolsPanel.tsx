@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import styled from 'styled-components';
+import { LuMap } from 'react-icons/lu';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,13 +75,19 @@ const Icon = styled.span`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  
+
   img {
     width: 140%;
     height: 140%;
     object-fit: contain;
     mask-image: radial-gradient(circle, black 50%, transparent 90%);
     -webkit-mask-image: radial-gradient(circle, black 50%, transparent 90%);
+  }
+
+  svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
   }
 `;
 
@@ -451,7 +458,7 @@ function RoutePlannerPanel({
       <PanelHeader $color={ROUTE_COLOR}>
         <PanelTitle style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon style={{ width: 14, height: 14 }}>
-            <img src="/icons/map.png" alt="" />
+            <LuMap size={14} />
           </Icon>
           Планировщик маршрута
         </PanelTitle>
@@ -627,9 +634,7 @@ export function MapToolsPanel({
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
         >
-          <Icon>
-            <img src="/icons/map.png" alt="" />
-          </Icon>
+          <Icon><LuMap size={16} /></Icon>
           Маршрут
         </ToolBtn>
       </Toolbar>

@@ -90,6 +90,8 @@ export interface Location {
   has_relay_server: boolean;
   is_active: boolean;
   notes: string | null;
+  chief_name?: string | null;
+  chief_phone?: string | null;
   tasks_count: number | null;
   created_at: string;
   updated_at: string;

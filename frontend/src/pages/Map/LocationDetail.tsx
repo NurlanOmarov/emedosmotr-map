@@ -18,7 +18,8 @@ import {
   LuX,
   LuMicroscope,
   LuPhone,
-  LuServer
+  LuServer,
+  LuMessageCircle
 } from 'react-icons/lu';
 import {
   StatusType,
@@ -514,6 +515,41 @@ function OverviewTab({ location, canEdit, onStatusChange, isUpdatingStatus }: Ov
           </InfoItem>
         </InfoGrid>
       </Card>
+
+      {location.type === 'military_office' && (location.chief_name || location.chief_phone) && (
+        <Card padding="14px">
+          <SectionTitle>Начальник призыва</SectionTitle>
+          {location.chief_name && (
+            <FieldGroup>
+              <FieldLabel>ФИО</FieldLabel>
+              <FieldValue style={{ fontSize: 14, fontWeight: 600 }}>{location.chief_name}</FieldValue>
+            </FieldGroup>
+          )}
+          {location.chief_phone && (
+            <FieldGroup style={{ marginTop: 8 }}>
+              <FieldLabel>Контакты</FieldLabel>
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                <Button 
+                  size="sm" 
+                  variant="primary" 
+                  onClick={() => window.location.href = `tel:${location.chief_phone.replace(/[^\d+]/g, '')}`}
+                  style={{ flex: 1, height: 36, fontSize: 12 }}
+                >
+                  <LuPhone size={14} style={{ marginRight: 6 }} /> Позвонить
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  onClick={() => window.open(`https://wa.me/${location.chief_phone.replace(/[^\d]/g, '')}`, '_blank')}
+                  style={{ flex: 1, height: 36, fontSize: 12, background: '#25D366', color: '#fff', border: 'none' }}
+                >
+                  <LuMessageCircle size={14} style={{ marginRight: 6 }} /> WhatsApp
+                </Button>
+              </div>
+            </FieldGroup>
+          )}
+        </Card>
+      )}
 
       {location.notes && (
         <Card padding="14px">
@@ -1481,6 +1517,59 @@ function CommissionModal({ commission, onClose, onSave }: {
   );
 }
 
+function EditLocationModal({ location, onClose, onSave }: {
+  location: any,
+  onClose: () => void,
+  onSave: (data: any) => void
+}) {
+  const [form, setForm] = useState({
+    name: location.name,
+    address: location.address || '',
+    notes: location.notes || '',
+    chief_name: location.chief_name || '',
+    chief_phone: location.chief_phone || '',
+  });
+
+  return (
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={e => e.stopPropagation()} padding="24px" style={{ maxWidth: 460 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20 }}>
+          Редактировать объект
+        </div>
+
+        <FormLabel>Название</FormLabel>
+        <FormInput value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+
+        <FormLabel>Адрес</FormLabel>
+        <FormInput value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
+
+        {location.type === 'military_office' && (
+          <>
+            <FormLabel>Начальник призыва (ФИО)</FormLabel>
+            <FormInput value={form.chief_name} onChange={e => setForm({...form, chief_name: e.target.value})} />
+            
+            <FormLabel>Контакты (телефон / WhatsApp)</FormLabel>
+            <FormInput value={form.chief_phone} onChange={e => setForm({...form, chief_phone: e.target.value})} placeholder="+7 777 ..." />
+          </>
+        )}
+
+        <FormLabel>Примечания</FormLabel>
+        <FieldTextarea 
+          value={form.notes} 
+          onChange={e => setForm({...form, notes: e.target.value})} 
+          placeholder="Дополнительная информация..."
+          style={{ marginBottom: 16 }}
+        />
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+          <Button variant="ghost" style={{ flex: 1 }} onClick={onClose}>Отмена</Button>
+          <Button variant="primary" style={{ flex: 1 }} onClick={() => onSave(form)}>Сохранить</Button>
+        </div>
+      </ModalContent>
+    </ModalOverlay>
+  );
+}
+
 function TabLoading() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
@@ -1515,6 +1604,7 @@ export function LocationDetail({ locationId }: Props) {
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
 
   const { data: location, isLoading } = useQuery({
     queryKey: ['location', locationId],
@@ -1544,6 +1634,16 @@ export function LocationDetail({ locationId }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['location', locationId] });
       qc.invalidateQueries({ queryKey: ['map-features'] });
+    },
+  });
+
+  const updateLocation = useMutation({
+    mutationFn: (data: any) => locationsApi.update(locationId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location', locationId] });
+      qc.invalidateQueries({ queryKey: ['map-features'] });
+      triggerUpdate();
+      setIsEditingLocation(false);
     },
   });
 
@@ -1714,13 +1814,21 @@ export function LocationDetail({ locationId }: Props) {
         </AnimatePresence>
       </TabContent>
 
+      {isEditingLocation && (
+        <EditLocationModal
+          location={location}
+          onClose={() => setIsEditingLocation(false)}
+          onSave={(data) => updateLocation.mutate(data)}
+        />
+      )}
+
       {/* ── Footer ── */}
       <Actions>
         <Button variant="ghost" size="sm" onClick={backToMap} style={{ flex: 1 }}>
           ← На карту
         </Button>
         {canEdit && (
-          <Button variant="secondary" size="sm" style={{ flex: 1 }}>
+          <Button variant="secondary" size="sm" style={{ flex: 1 }} onClick={() => setIsEditingLocation(true)}>
             ✏️ Редактировать
           </Button>
         )}

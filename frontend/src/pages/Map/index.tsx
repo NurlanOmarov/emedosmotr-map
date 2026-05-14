@@ -9,7 +9,9 @@ import {
   LuMapPin,
   LuRuler,
   LuFileText,
-  LuX
+  LuX,
+  LuMap,
+  LuClipboardList,
 } from 'react-icons/lu';
 import { locationsApi, geoApi } from '@/services/api';
 import { useMapViewStore } from '@/features/map/useMapViewStore';
@@ -328,8 +330,8 @@ function worstStatus(statuses: string[]): string {
 
 const LAYERS = [
   { id: 'statuses', label: 'Статусы', icon: <LuMapPin size={14} /> },
-  { id: 'tasks', label: 'Задачи', icon: '/icons/tasks.png' },
-  { id: 'regions', label: 'Регионы', icon: '/icons/map.png' },
+  { id: 'tasks', label: 'Задачи', icon: <LuClipboardList size={14} /> },
+  { id: 'regions', label: 'Регионы', icon: <LuMap size={14} /> },
   { id: 'equipment', label: 'Оборудование', icon: '/icons/equipment.png' },
   { id: 'distance', label: 'Дальность', icon: <LuRuler size={14} /> },
 ];
@@ -884,25 +886,18 @@ export function MapPage() {
     },
     // Start fetching IMMEDIATELY, don't wait for map
     enabled: regionsLayerActive,
-    // Boundaries never change — serve from cache forever
     staleTime: Infinity,
     gcTime: Infinity,
     refetchOnWindowFocus: false,
-    // Use localStorage cache as initial data for instant render
-    initialData: () => {
+    // Show localStorage data instantly while queryFn loads fresh data from API.
+    // placeholderData (unlike initialData) never blocks the network request,
+    // so is_connected changes from the DB always appear after a deploy.
+    placeholderData: () => {
       try {
         const cached = localStorage.getItem('regions-geo-cache');
-        const cacheTime = localStorage.getItem('regions-geo-cache-time');
-        if (cached && cacheTime) {
-          const age = Date.now() - Number(cacheTime);
-          if (age < 30 * 60 * 1000) return JSON.parse(cached);
-        }
+        if (cached) return JSON.parse(cached);
       } catch { /* ignore */ }
       return undefined;
-    },
-    initialDataUpdatedAt: () => {
-      const cacheTime = localStorage.getItem('regions-geo-cache-time');
-      return cacheTime ? Number(cacheTime) : 0;
     },
   });
 
@@ -1908,9 +1903,7 @@ export function MapPage() {
             onClick={() => setMapBackground('yandex')}
             whileHover={{ x: 3 }}
           >
-            <LayerIcon>
-              <img src="/icons/map.png" alt="" />
-            </LayerIcon> Стандарт
+            <LayerIcon><LuMap size={14} /></LayerIcon> Стандарт
           </LayerToggle>
           <LayerToggle
             $active={mapBackground === 'white'}

@@ -25,6 +25,8 @@ class LocationCreate(BaseModel):
     has_relay_server: bool = False
     relay_server_notes: str | None = None
     notes: str | None = None
+    chief_name: str | None = None
+    chief_phone: str | None = None
 
     @model_validator(mode='after')
     def no_relay_server_for_military(self):
@@ -43,6 +45,8 @@ class LocationUpdate(BaseModel):
     relay_server_notes: str | None = None
     notes: str | None = None
     is_active: bool | None = None
+    chief_name: str | None = None
+    chief_phone: str | None = None
 
 
 class StatusUpdate(BaseModel):
@@ -65,6 +69,8 @@ class LocationResponse(BaseModel):
     has_relay_server: bool
     is_active: bool
     notes: str | None
+    chief_name: str | None = None
+    chief_phone: str | None = None
     tasks_count: int | None = None
     last_updated: datetime | None = None
     created_at: datetime
