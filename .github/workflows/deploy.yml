@@ -32,7 +32,7 @@ jobs:
           npm ci
           npm run build
 
-      - name: Pull latest code on server
+      - name: Pull latest code + clean old dist on server
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -47,17 +47,55 @@ jobs:
             else
               git clone https://github.com/NurlanOmarov/emedosmotr-map.git /home/administrator/emedosmotr-map
             fi
+            # WIPE old dist completely — scp does not delete removed files
+            # and a stale layout was leaving the prod with month-old assets.
+            rm -rf /home/administrator/emedosmotr-map/frontend/dist
             mkdir -p /home/administrator/emedosmotr-map/frontend/dist
+            echo "=== Pre-scp state ==="
+            ls -la /home/administrator/emedosmotr-map/frontend/dist/
 
-      - name: Copy frontend dist to server
+      - name: Pack frontend dist
+        run: |
+          cd frontend
+          tar -czf dist.tar.gz dist/
+          ls -lh dist.tar.gz
+          # Show what's actually inside for debugging
+          tar -tzf dist.tar.gz | head -10
+
+      - name: Copy frontend dist tarball to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: "frontend/dist/"
-          target: "/home/administrator/emedosmotr-map/frontend/"
+          source: "frontend/dist.tar.gz"
+          target: "/home/administrator/emedosmotr-map/"
+
+      - name: Extract dist on server + verify
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cd /home/administrator/emedosmotr-map
+            # appleboy/scp uploads to {target}/{source-dir-name}/{file}, so the tarball is at frontend/dist.tar.gz
+            TARBALL=$(find . -name dist.tar.gz -newer /tmp 2>/dev/null | head -1)
+            [ -z "$TARBALL" ] && TARBALL=$(find . -name dist.tar.gz | head -1)
+            echo "Tarball location: $TARBALL"
+            ls -la "$TARBALL"
+            tar -xzf "$TARBALL" -C frontend/ --overwrite
+            rm -f "$TARBALL"
+            echo "=== Post-extract state ==="
+            ls -la frontend/dist/ | head -5
+            echo "=== index.html date ==="
+            stat frontend/dist/index.html
+            echo "=== Verify new code is in bundle ==="
+            grep -l "controllerchange" frontend/dist/assets/*.js | head -1 || echo "WARN: controllerchange not found"
+            grep -o "skipWaiting\|geo/regions" frontend/dist/sw.js | sort -u || echo "WARN: SW symbols not found"
 
       - name: Start containers and run migrations
         uses: appleboy/ssh-action@v1.0.0
