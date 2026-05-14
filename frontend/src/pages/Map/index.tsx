@@ -58,17 +58,11 @@ const MapContainer = styled.div`
 const YMapEl = styled.div<{ $whiteBg: boolean }>`
   width: 100%;
   height: 100%;
+  /* Dark backdrop only on the container — avoids a white flash before tiles load.
+     Do NOT force background on canvas/.ymaps-*-pane: Yandex Maps now renders
+     tiles via canvas, and an !important override paints the whole map black. */
   background: ${({ $whiteBg, theme }) =>
     $whiteBg ? (theme.mode === 'dark' ? '#04080F' : '#ffffff') : theme.colors.bgSecondary};
-
-  ${({ theme }) => theme.mode === 'dark' && `
-    [class*="ymaps-"][class*="-pane"],
-    [class*="ymaps-"][class*="-tiles"],
-    [class*="ymaps-"][class*="-map-bg"],
-    canvas {
-      background: #04080F !important;
-    }
-  `}
 `;
 
 const FiltersBtn = styled(motion.button)`
